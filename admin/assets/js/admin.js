@@ -1,0 +1,1042 @@
+/**
+ * SafeSpot admin screen.
+ *
+ * Vanilla JS + wp.apiFetch. Item rows are rendered server-side; REST responses
+ * return refreshed row HTML so the markup lives in one place.
+ *
+ * @package SafeSpot
+ */
+
+/* global safespotAdmin */
+( function ( wp, config ) {
+	'use strict';
+
+	const { __, _n, sprintf } = wp.i18n;
+	const apiFetch = wp.apiFetch;
+	const speak = wp.a11y && wp.a11y.speak ? wp.a11y.speak : function () {};
+	const NS = '/safespot/v1';
+
+	const $ = ( selector, context = document ) => context.querySelector( selector );
+	const $$ = ( selector, context = document ) => Array.from( context.querySelectorAll( selector ) );
+
+	/**
+	 * Escapes a value for use in HTML text or attributes.
+	 *
+	 * @param {*} value Value.
+	 * @return {string} Escaped string.
+	 */
+	function esc( value ) {
+		const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+		return String( value === null || value === undefined ? '' : value ).replace( /[&<>"']/g, ( c ) => map[ c ] );
+	}
+
+	/**
+	 * Human-readable message for an apiFetch error.
+	 *
+	 * @param {Object} error Error.
+	 * @return {string} Message.
+	 */
+	function errorMessage( error ) {
+		if ( error && error.message ) {
+			return error.message;
+		}
+		return __( 'Something went wrong. Please try again.', 'tbsh-safespot-restore-points' );
+	}
+
+	/**
+	 * Whether the request died without a JSON response (e.g. a PHP fatal error).
+	 *
+	 * @param {Object} error Error.
+	 * @return {boolean} True for crashes.
+	 */
+	function isCrash( error ) {
+		return ! error || [ 'invalid_json', 'fetch_error' ].includes( error.code );
+	}
+
+	/* ------------------------------------------------------------------ *
+	 * Notices
+	 * ------------------------------------------------------------------ */
+
+	const Notices = {
+		/**
+		 * Shows a WordPress-style admin notice.
+		 *
+		 * @param {string} type    success|error|warning|info.
+		 * @param {string} message Message.
+		 * @param {Array}  actions Optional [{ label, onClick }].
+		 * @return {HTMLElement} Notice.
+		 */
+		show( type, message, actions = [] ) {
+			const container = $( '#safespot-notices' );
+			const notice = document.createElement( 'div' );
+			notice.className = 'notice notice-' + type + ' is-dismissible safespot-notice';
+
+			const p = document.createElement( 'p' );
+			p.textContent = message;
+			notice.appendChild( p );
+
+			if ( actions.length ) {
+				const row = document.createElement( 'p' );
+				actions.forEach( ( action ) => {
+					const button = document.createElement( 'button' );
+					button.type = 'button';
+					button.className = 'button button-small';
+					button.textContent = action.label;
+					button.addEventListener( 'click', () => {
+						notice.remove();
+						action.onClick();
+					} );
+					row.appendChild( button );
+				} );
+				notice.appendChild( row );
+			}
+
+			const dismiss = document.createElement( 'button' );
+			dismiss.type = 'button';
+			dismiss.className = 'notice-dismiss';
+			dismiss.innerHTML = '<span class="screen-reader-text">' + esc( __( 'Dismiss this notice.', 'tbsh-safespot-restore-points' ) ) + '</span>';
+			dismiss.addEventListener( 'click', () => notice.remove() );
+			notice.appendChild( dismiss );
+
+			if ( container ) {
+				container.prepend( notice );
+				$$( '.safespot-notice', container ).slice( 4 ).forEach( ( old ) => old.remove() );
+			}
+			speak( message, 'error' === type ? 'assertive' : 'polite' );
+			return notice;
+		},
+	};
+
+	/* ------------------------------------------------------------------ *
+	 * Modal (native <dialog>)
+	 * ------------------------------------------------------------------ */
+
+	const Modal = ( function () {
+		const dialog = $( '#safespot-modal' );
+		if ( ! dialog ) {
+			return null;
+		}
+
+		const form = $( 'form', dialog );
+		const title = $( '.safespot-modal__title', dialog );
+		const body = $( '.safespot-modal__body', dialog );
+		const confirm = $( '.safespot-modal__confirm', dialog );
+		const progress = $( '.safespot-modal__progress', dialog );
+		const progressText = $( '.safespot-modal__progress-text', dialog );
+		const progressBar = $( '.safespot-progress', dialog );
+
+		let handler = null;
+		let busy = false;
+		let lastFocus = null;
+
+		function setBusy( on, text = '' ) {
+			busy = on;
+			progress.hidden = ! on;
+			progressText.textContent = text;
+			progressBar.setAttribute( 'aria-valuetext', text );
+			confirm.disabled = on || confirm.dataset.disabled === '1';
+			$$( '[data-safespot-close]', dialog ).forEach( ( button ) => {
+				button.disabled = on;
+			} );
+			body.setAttribute( 'aria-busy', on ? 'true' : 'false' );
+			dialog.classList.toggle( 'is-busy', on );
+		}
+
+		function setConfirm( label, disabled = false, destructive = false ) {
+			confirm.hidden = ! label;
+			confirm.textContent = label || '';
+			confirm.dataset.disabled = disabled ? '1' : '0';
+			confirm.disabled = disabled;
+			confirm.classList.toggle( 'safespot-button-danger', destructive );
+		}
+
+		function setError( message, extra ) {
+			let box = $( '.safespot-modal__error', body );
+			if ( ! box ) {
+				box = document.createElement( 'div' );
+				box.className = 'notice notice-error inline safespot-modal__error';
+				box.setAttribute( 'role', 'alert' );
+				body.prepend( box );
+			}
+			box.innerHTML = '<p>' + esc( message ) + '</p>';
+			if ( extra ) {
+				box.appendChild( extra );
+			}
+			box.scrollIntoView( { block: 'nearest' } );
+		}
+
+		function open( options ) {
+			lastFocus = document.activeElement;
+			title.textContent = options.title || '';
+			body.innerHTML = options.body || '';
+			handler = options.onConfirm || null;
+			setConfirm( options.confirmLabel, !! options.confirmDisabled, !! options.destructive );
+			setBusy( false );
+			if ( ! dialog.open ) {
+				dialog.showModal();
+			}
+			const focusable = $( 'textarea, input:not([type=hidden]), select', body );
+			( focusable || ( confirm.hidden ? $( '[data-safespot-close]', dialog ) : confirm ) ).focus();
+		}
+
+		function close() {
+			busy = false;
+			setBusy( false );
+			if ( dialog.open ) {
+				dialog.close();
+			}
+		}
+
+		dialog.addEventListener( 'close', () => {
+			handler = null;
+			if ( lastFocus && document.contains( lastFocus ) ) {
+				lastFocus.focus();
+			}
+		} );
+
+		dialog.addEventListener( 'cancel', ( event ) => {
+			if ( busy ) {
+				event.preventDefault();
+			}
+		} );
+
+		dialog.addEventListener( 'click', ( event ) => {
+			if ( busy ) {
+				return;
+			}
+			if ( event.target.closest( '[data-safespot-close]' ) || event.target === dialog ) {
+				event.preventDefault();
+				close();
+			}
+		} );
+
+		form.addEventListener( 'submit', ( event ) => {
+			event.preventDefault();
+			if ( busy || ! handler || confirm.disabled ) {
+				return;
+			}
+			handler();
+		} );
+
+		return {
+			open,
+			close,
+			setBusy,
+			setConfirm,
+			setError,
+			body,
+			setHandler( fn ) {
+				handler = fn;
+			},
+			isBusy: () => busy,
+		};
+	} )();
+
+	/* ------------------------------------------------------------------ *
+	 * Helpers for item rows
+	 * ------------------------------------------------------------------ */
+
+	function itemFrom( element ) {
+		const tbody = element.closest( 'tbody.safespot-item' );
+		if ( ! tbody ) {
+			return null;
+		}
+		return {
+			tbody,
+			type: tbody.dataset.type,
+			slug: tbody.dataset.slug,
+			name: tbody.dataset.name,
+			version: tbody.dataset.version,
+			prefixes: tbody.dataset.prefixes || '',
+		};
+	}
+
+	function pointFrom( element ) {
+		const row = element.closest( 'tr.safespot-point' );
+		if ( ! row ) {
+			return null;
+		}
+		return {
+			row,
+			id: parseInt( row.dataset.id, 10 ),
+			version: row.dataset.version,
+			date: row.dataset.date,
+			note: row.dataset.note || '',
+			locked: '1' === row.dataset.locked,
+		};
+	}
+
+	/**
+	 * Replaces an item <tbody> with fresh server HTML.
+	 *
+	 * @param {Object} response REST response with html + item_id.
+	 */
+	function replaceRow( response ) {
+		if ( ! response || ! response.item_id ) {
+			return;
+		}
+		const current = document.getElementById( response.item_id );
+		if ( ! current ) {
+			return;
+		}
+		if ( ! response.html ) {
+			current.remove();
+			applyFilters();
+			return;
+		}
+		const template = document.createElement( 'template' );
+		template.innerHTML = response.html.trim();
+		const fresh = template.content.firstElementChild;
+		if ( fresh ) {
+			const wasChecked = $( '.safespot-select', current );
+			const box = $( '.safespot-select', fresh );
+			if ( wasChecked && box ) {
+				box.checked = wasChecked.checked;
+			}
+			current.replaceWith( fresh );
+		}
+		applyFilters();
+		updateBulkButton();
+	}
+
+	async function refreshItem( type, slug ) {
+		try {
+			const response = await apiFetch( { path: NS + '/item?type=' + encodeURIComponent( type ) + '&slug=' + encodeURIComponent( slug ) } );
+			replaceRow( response );
+		} catch ( e ) {
+			// Row refresh is cosmetic; ignore.
+		}
+	}
+
+	/* ------------------------------------------------------------------ *
+	 * Search / filter / selection
+	 * ------------------------------------------------------------------ */
+
+	function applyFilters() {
+		const table = $( '.safespot-items' );
+		if ( ! table ) {
+			return;
+		}
+		const search = ( $( '#safespot-search' ) || { value: '' } ).value.trim().toLowerCase();
+		const filter = ( $( '#safespot-filter' ) || { value: 'all' } ).value;
+		let visible = 0;
+
+		$$( 'tbody.safespot-item', table ).forEach( ( tbody ) => {
+			const data = tbody.dataset;
+			const count = parseInt( data.count, 10 ) || 0;
+			let show = ! search || ( data.search || '' ).includes( search );
+
+			if ( show && 'with' === filter ) {
+				show = count > 0;
+			} else if ( show && 'without' === filter ) {
+				show = 0 === count;
+			} else if ( show && 'updates' === filter ) {
+				show = !! data.update;
+			} else if ( show && 'active' === filter ) {
+				show = [ 'active', 'network', 'parent' ].includes( data.status );
+			} else if ( show && 'not_installed' === filter ) {
+				show = 'not_installed' === data.status;
+			}
+
+			tbody.hidden = ! show;
+			if ( show ) {
+				visible++;
+			}
+		} );
+
+		const empty = $( '.safespot-no-results' );
+		if ( empty ) {
+			empty.hidden = visible > 0;
+		}
+		const counter = $( '.safespot-toolbar__count' );
+		if ( counter ) {
+			/* translators: %d: number of items. */
+			counter.textContent = sprintf( _n( '%d item', '%d items', visible, 'tbsh-safespot-restore-points' ), visible );
+		}
+	}
+
+	function selectedItems() {
+		return $$( 'tbody.safespot-item:not([hidden]) .safespot-select:checked' ).map( ( box ) => {
+			const item = itemFrom( box );
+			return { type: item.type, slug: item.slug };
+		} );
+	}
+
+	function updateBulkButton() {
+		const button = $( '[data-safespot-action="bulk-save"]' );
+		if ( button ) {
+			const count = selectedItems().length;
+			button.disabled = 0 === count;
+		}
+	}
+
+	/* ------------------------------------------------------------------ *
+	 * Actions
+	 * ------------------------------------------------------------------ */
+
+	function openSave( item ) {
+		const body =
+			'<p>' +
+			esc(
+				/* translators: 1: plugin/theme name, 2: version. */
+				sprintf( __( 'Save a restore point of %1$s %2$s. You can restore this exact version later with one click.', 'tbsh-safespot-restore-points' ), item.name, item.version )
+			) +
+			'</p>' +
+			'<p><label for="safespot-note" class="safespot-label">' +
+			esc( __( 'Note (optional)', 'tbsh-safespot-restore-points' ) ) +
+			'</label><textarea id="safespot-note" class="large-text" rows="2" maxlength="1000" placeholder="' +
+			esc( __( 'e.g. Stable before v3.0 update', 'tbsh-safespot-restore-points' ) ) +
+			'"></textarea></p>' +
+			'<fieldset class="safespot-fieldset"><legend class="screen-reader-text">' +
+			esc( __( 'Settings snapshot', 'tbsh-safespot-restore-points' ) ) +
+			'</legend><label><input type="checkbox" id="safespot-include-settings" ' +
+			( config.settingsSnapshot ? 'checked' : '' ) +
+			' /> ' +
+			esc( __( 'Also save a settings snapshot (wp_options rows)', 'tbsh-safespot-restore-points' ) ) +
+			'</label><div class="safespot-prefixes" ' +
+			( config.settingsSnapshot ? '' : 'hidden' ) +
+			'><label for="safespot-prefixes" class="safespot-label">' +
+			esc( __( 'Option name prefixes', 'tbsh-safespot-restore-points' ) ) +
+			'</label><input type="text" id="safespot-prefixes" class="regular-text" value="' +
+			esc( item.prefixes ) +
+			'" aria-describedby="safespot-prefixes-desc" /><p class="description" id="safespot-prefixes-desc">' +
+			esc( __( 'Comma-separated. Options whose names start with these prefixes are exported. Custom database tables are not included.', 'tbsh-safespot-restore-points' ) ) +
+			'</p></div></fieldset>';
+
+		Modal.open( {
+			/* translators: %s: plugin/theme name. */
+			title: sprintf( __( 'Save SafeSpot: %s', 'tbsh-safespot-restore-points' ), item.name ),
+			body,
+			confirmLabel: __( 'Save SafeSpot', 'tbsh-safespot-restore-points' ),
+			onConfirm: async () => {
+				const include = $( '#safespot-include-settings', Modal.body ).checked;
+				const data = {
+					type: item.type,
+					slug: item.slug,
+					note: $( '#safespot-note', Modal.body ).value,
+					include_settings: include,
+				};
+				if ( include ) {
+					data.prefixes = $( '#safespot-prefixes', Modal.body ).value;
+				}
+				Modal.setBusy( true, __( 'Creating the archive… large plugins can take a minute.', 'tbsh-safespot-restore-points' ) );
+				try {
+					const response = await apiFetch( { path: NS + '/points', method: 'POST', data } );
+					Modal.close();
+					replaceRow( response );
+					Notices.show( 'success', response.message );
+				} catch ( error ) {
+					Modal.setBusy( false );
+					Modal.setError( errorMessage( error ) );
+				}
+			},
+		} );
+
+		const toggle = $( '#safespot-include-settings', Modal.body );
+		toggle.addEventListener( 'change', () => {
+			$( '.safespot-prefixes', Modal.body ).hidden = ! toggle.checked;
+		} );
+	}
+
+	const DIRECTION_TEXT = {
+		downgrade: __( 'Roll back to an older version.', 'tbsh-safespot-restore-points' ),
+		reinstall: __( 'Reinstall the same version (replaces any edited or corrupted files).', 'tbsh-safespot-restore-points' ),
+		upgrade: __( 'Restore a newer version than the one installed.', 'tbsh-safespot-restore-points' ),
+		install: __( 'This item is not installed. It will be reinstalled from the SafeSpot.', 'tbsh-safespot-restore-points' ),
+	};
+
+	const CHECK_ICONS = { pass: 'yes-alt', warn: 'warning', fail: 'dismiss', info: 'info-outline' };
+
+	function confirmLabel( pre ) {
+		const version = pre.target_version;
+		switch ( pre.direction ) {
+			case 'downgrade':
+				/* translators: %s: version. */
+				return sprintf( __( 'Roll back to %s', 'tbsh-safespot-restore-points' ), version );
+			case 'reinstall':
+			case 'install':
+				/* translators: %s: version. */
+				return sprintf( __( 'Reinstall %s', 'tbsh-safespot-restore-points' ), version );
+			default:
+				/* translators: %s: version. */
+				return sprintf( __( 'Restore version %s', 'tbsh-safespot-restore-points' ), version );
+		}
+	}
+
+	function renderDiff( diff ) {
+		if ( ! diff ) {
+			return '';
+		}
+		const c = diff.counts;
+		const groups = [
+			[ 'modified', __( 'Will change', 'tbsh-safespot-restore-points' ) ],
+			[ 'restored', __( 'Will be added back', 'tbsh-safespot-restore-points' ) ],
+			[ 'removed', __( 'Will be removed', 'tbsh-safespot-restore-points' ) ],
+		];
+		if ( ! c.modified && ! c.restored && ! c.removed ) {
+			return '<p class="safespot-diff-summary"><span class="dashicons dashicons-yes" aria-hidden="true"></span> ' + esc( __( 'The files on disk are identical to this SafeSpot.', 'tbsh-safespot-restore-points' ) ) + '</p>';
+		}
+		let html =
+			'<details class="safespot-diff"><summary>' +
+			esc(
+				/* translators: 1: changed files, 2: added files, 3: removed files, 4: unchanged files. */
+				sprintf( __( 'File changes: %1$d changed, %2$d added back, %3$d removed (%4$d unchanged)', 'tbsh-safespot-restore-points' ), c.modified, c.restored, c.removed, c.unchanged )
+			) +
+			'</summary>';
+		groups.forEach( ( [ key, label ] ) => {
+			if ( diff[ key ] && diff[ key ].length ) {
+				html += '<h4>' + esc( label ) + ' (' + esc( c[ key ] ) + ')</h4><ul>' + diff[ key ].map( ( path ) => '<li><code>' + esc( path ) + '</code></li>' ).join( '' ) + '</ul>';
+			}
+		} );
+		if ( diff.truncated ) {
+			html += '<p class="description">' + esc( __( 'List shortened.', 'tbsh-safespot-restore-points' ) ) + '</p>';
+		}
+		return html + '</details>';
+	}
+
+	function renderPreflight( pre, item ) {
+		const point = pre.point;
+		const noun = 'theme' === point.type ? __( 'theme', 'tbsh-safespot-restore-points' ) : __( 'plugin', 'tbsh-safespot-restore-points' );
+		let html =
+			'<div class="safespot-compare">' +
+			'<div class="safespot-compare__side"><span class="safespot-compare__label">' +
+			esc( __( 'Current', 'tbsh-safespot-restore-points' ) ) +
+			'</span><span class="safespot-compare__version">' +
+			esc( pre.current_version || __( 'Not installed', 'tbsh-safespot-restore-points' ) ) +
+			'</span><span class="safespot-compare__meta">' +
+			esc( pre.status_label ) +
+			'</span></div>' +
+			'<span class="dashicons dashicons-arrow-right-alt safespot-compare__arrow" aria-hidden="true"></span>' +
+			'<div class="safespot-compare__side is-target"><span class="safespot-compare__label">' +
+			esc( __( 'SafeSpot', 'tbsh-safespot-restore-points' ) ) +
+			'</span><span class="safespot-compare__version">' +
+			esc( pre.target_version || '—' ) +
+			'</span><span class="safespot-compare__meta">' +
+			esc( point.created_human ) +
+			'</span></div></div>' +
+			'<p class="safespot-direction safespot-direction--' +
+			esc( pre.direction ) +
+			'">' +
+			esc( DIRECTION_TEXT[ pre.direction ] || '' ) +
+			'</p>';
+
+		if ( point.note ) {
+			html += '<blockquote class="safespot-quote">' + esc( point.note ) + '</blockquote>';
+		}
+
+		html += '<h3 class="safespot-subheading">' + esc( __( 'Pre-restore checks', 'tbsh-safespot-restore-points' ) ) + '</h3><ul class="safespot-checks">';
+		pre.checks.forEach( ( check ) => {
+			html +=
+				'<li class="safespot-check safespot-check--' +
+				esc( check.status ) +
+				'"><span class="dashicons dashicons-' +
+				esc( CHECK_ICONS[ check.status ] || 'info-outline' ) +
+				'" aria-hidden="true"></span><div><strong>' +
+				esc( check.label ) +
+				'</strong><span class="screen-reader-text">: ' +
+				esc( check.status ) +
+				'</span> <span>' +
+				esc( check.message ) +
+				'</span></div></li>';
+		} );
+		html += '</ul>';
+
+		html += renderDiff( pre.diff );
+
+		if ( pre.has_settings ) {
+			html +=
+				'<fieldset class="safespot-fieldset safespot-mode"><legend>' +
+				esc( __( 'What to restore', 'tbsh-safespot-restore-points' ) ) +
+				'</legend><label><input type="radio" name="safespot-mode" value="files" checked /> ' +
+				esc( __( 'Files only', 'tbsh-safespot-restore-points' ) ) +
+				'</label><label><input type="radio" name="safespot-mode" value="files_settings" /> ' +
+				esc(
+					/* translators: %d: number of settings rows. */
+					sprintf( __( 'Files + settings (%d option rows)', 'tbsh-safespot-restore-points' ), point.settings_count )
+				) +
+				'</label><p class="description">' +
+				esc( __( 'Settings restore overwrites the matching wp_options rows. Custom database tables are not included.', 'tbsh-safespot-restore-points' ) ) +
+				'</p></fieldset>';
+		} else {
+			html += '<p class="description">' + esc( __( 'Only files are restored. Database changes made by a newer version (custom tables, migrated options) are not undone.', 'tbsh-safespot-restore-points' ) ) + '</p>';
+		}
+
+		if ( pre.installed ) {
+			html +=
+				'<p><label><input type="checkbox" id="safespot-pause" ' +
+				( 'downgrade' === pre.direction || pre.hold ? 'checked' : '' ) +
+				' /> ' +
+				esc(
+					/* translators: %s: "plugin" or "theme". */
+					sprintf( __( 'Pause updates for this %s afterwards, so it is not updated straight back', 'tbsh-safespot-restore-points' ), noun )
+				) +
+				'</label></p>';
+		}
+
+		if ( pre.will_backup ) {
+			html += '<p class="safespot-info"><span class="dashicons dashicons-shield" aria-hidden="true"></span> ' + esc( __( 'A SafeSpot of the current version is saved first, so you can undo this restore.', 'tbsh-safespot-restore-points' ) ) + '</p>';
+		}
+
+		return html;
+	}
+
+	let restoreInProgress = false;
+
+	window.addEventListener( 'beforeunload', ( event ) => {
+		if ( restoreInProgress ) {
+			event.preventDefault();
+			event.returnValue = '';
+		}
+	} );
+
+	async function openRestore( item, point ) {
+		Modal.open( {
+			/* translators: %s: plugin/theme name. */
+			title: sprintf( __( 'Restore %s', 'tbsh-safespot-restore-points' ), item.name ),
+			body: '<p class="safespot-loading"><span class="spinner is-active" aria-hidden="true"></span> ' + esc( __( 'Running pre-restore checks…', 'tbsh-safespot-restore-points' ) ) + '</p>',
+			confirmLabel: __( 'Restore', 'tbsh-safespot-restore-points' ),
+			confirmDisabled: true,
+		} );
+
+		let pre;
+		try {
+			pre = await apiFetch( { path: NS + '/points/' + point.id + '/preflight' } );
+		} catch ( error ) {
+			Modal.body.innerHTML = '';
+			Modal.setError( errorMessage( error ) );
+			return;
+		}
+
+		Modal.body.innerHTML = renderPreflight( pre, item );
+		const label = confirmLabel( pre );
+		Modal.setConfirm( label, ! pre.can_restore );
+
+		Modal.setHandler( async () => {
+			const modeInput = $( 'input[name="safespot-mode"]:checked', Modal.body );
+			const pauseInput = $( '#safespot-pause', Modal.body );
+			const data = {
+				mode: modeInput ? modeInput.value : 'files',
+				pause_updates: pauseInput ? pauseInput.checked : false,
+			};
+
+			const steps = [
+				pre.will_backup ? __( 'Saving a safety SafeSpot of the current version…', 'tbsh-safespot-restore-points' ) : __( 'Verifying the archive…', 'tbsh-safespot-restore-points' ),
+				__( 'Verifying the archive checksum…', 'tbsh-safespot-restore-points' ),
+				__( 'Replacing files…', 'tbsh-safespot-restore-points' ),
+				__( 'Checking that the site still loads…', 'tbsh-safespot-restore-points' ),
+			];
+			let step = 0;
+			Modal.setBusy( true, steps[ 0 ] );
+			const timer = window.setInterval( () => {
+				step = Math.min( step + 1, steps.length - 1 );
+				Modal.setBusy( true, steps[ step ] );
+			}, 3500 );
+			restoreInProgress = true;
+
+			try {
+				const response = await apiFetch( { path: NS + '/points/' + point.id + '/restore', method: 'POST', data } );
+				window.clearInterval( timer );
+				restoreInProgress = false;
+				Modal.close();
+				replaceRow( response );
+				const message = [ response.message ].concat( response.warnings || [] ).join( ' ' );
+				Notices.show(
+					response.warnings && response.warnings.length ? 'warning' : 'success',
+					message,
+					response.can_undo ? [ { label: __( 'Undo this restore', 'tbsh-safespot-restore-points' ), onClick: () => rollbackLast( item.name ) } ] : []
+				);
+			} catch ( error ) {
+				window.clearInterval( timer );
+				restoreInProgress = false;
+				Modal.setBusy( false );
+				Modal.setConfirm( label, true );
+				if ( error && error.data && error.data.html ) {
+					replaceRow( error.data );
+				}
+				if ( isCrash( error ) ) {
+					const button = document.createElement( 'button' );
+					button.type = 'button';
+					button.className = 'button button-primary';
+					button.textContent = __( 'Roll back this restore', 'tbsh-safespot-restore-points' );
+					button.addEventListener( 'click', () => rollbackLast( item.name, true ) );
+					const wrap = document.createElement( 'p' );
+					wrap.appendChild( button );
+					Modal.setError( __( 'The server stopped responding during the restore. The restored version may have caused a fatal error. You can roll back to the safety SafeSpot now.', 'tbsh-safespot-restore-points' ), wrap );
+				} else {
+					Modal.setError( errorMessage( error ) );
+				}
+			}
+		} );
+	}
+
+	function rollbackLast( name, skipConfirm = false ) {
+		const run = async () => {
+			Modal.setBusy( true, __( 'Rolling back…', 'tbsh-safespot-restore-points' ) );
+			try {
+				const response = await apiFetch( { path: NS + '/rollback', method: 'POST' } );
+				Modal.close();
+				replaceRow( response );
+				$$( '[data-safespot-action="rollback-last"], .safespot-recovery-notice' ).forEach( ( el ) => el.remove() );
+				Notices.show( 'success', response.message );
+			} catch ( error ) {
+				Modal.setBusy( false );
+				Modal.setError( errorMessage( error ) );
+			}
+		};
+
+		if ( skipConfirm && Modal.body.closest( 'dialog' ).open ) {
+			run();
+			return;
+		}
+
+		Modal.open( {
+			title: __( 'Roll back the last restore?', 'tbsh-safespot-restore-points' ),
+			body:
+				'<p>' +
+				esc(
+					/* translators: %s: plugin/theme name. */
+					sprintf( __( '%s will be put back exactly as it was before the last restore, using the automatic safety SafeSpot.', 'tbsh-safespot-restore-points' ), name || '' )
+				) +
+				'</p>',
+			confirmLabel: __( 'Roll back', 'tbsh-safespot-restore-points' ),
+			onConfirm: run,
+		} );
+	}
+
+	function openNote( item, point ) {
+		Modal.open( {
+			/* translators: %s: version. */
+			title: sprintf( __( 'Edit note – %s', 'tbsh-safespot-restore-points' ), item.name + ' ' + point.version ),
+			body:
+				'<p><label for="safespot-edit-note" class="safespot-label">' +
+				esc( __( 'Note', 'tbsh-safespot-restore-points' ) ) +
+				'</label><textarea id="safespot-edit-note" class="large-text" rows="3" maxlength="1000">' +
+				esc( point.note ) +
+				'</textarea></p>',
+			confirmLabel: __( 'Save note', 'tbsh-safespot-restore-points' ),
+			onConfirm: async () => {
+				Modal.setBusy( true, __( 'Saving…', 'tbsh-safespot-restore-points' ) );
+				try {
+					const response = await apiFetch( {
+						path: NS + '/points/' + point.id,
+						method: 'PATCH',
+						data: { note: $( '#safespot-edit-note', Modal.body ).value },
+					} );
+					Modal.close();
+					replaceRow( response );
+					Notices.show( 'success', response.message );
+				} catch ( error ) {
+					Modal.setBusy( false );
+					Modal.setError( errorMessage( error ) );
+				}
+			},
+		} );
+	}
+
+	async function toggleLock( button, point ) {
+		button.disabled = true;
+		try {
+			const response = await apiFetch( {
+				path: NS + '/points/' + point.id,
+				method: 'PATCH',
+				data: { locked: ! point.locked },
+			} );
+			replaceRow( response );
+			Notices.show( 'success', response.message );
+		} catch ( error ) {
+			button.disabled = false;
+			Notices.show( 'error', errorMessage( error ) );
+		}
+	}
+
+	function openDelete( item, point ) {
+		let body =
+			'<p>' +
+			esc(
+				/* translators: 1: plugin/theme name, 2: version, 3: date. */
+				sprintf( __( 'Delete the SafeSpot of %1$s %2$s saved on %3$s? The archive is removed permanently.', 'tbsh-safespot-restore-points' ), item.name, point.version, point.date )
+			) +
+			'</p>';
+		if ( point.locked ) {
+			body += '<div class="notice notice-warning inline"><p>' + esc( __( 'This SafeSpot is locked to protect it from cleanup.', 'tbsh-safespot-restore-points' ) ) + '</p></div>';
+		}
+
+		Modal.open( {
+			title: __( 'Delete SafeSpot?', 'tbsh-safespot-restore-points' ),
+			body,
+			confirmLabel: __( 'Delete permanently', 'tbsh-safespot-restore-points' ),
+			destructive: true,
+			onConfirm: async () => {
+				Modal.setBusy( true, __( 'Deleting…', 'tbsh-safespot-restore-points' ) );
+				try {
+					const response = await apiFetch( { path: NS + '/points/' + point.id, method: 'DELETE' } );
+					Modal.close();
+					replaceRow( response );
+					Notices.show( 'success', response.message );
+				} catch ( error ) {
+					Modal.setBusy( false );
+					Modal.setError( errorMessage( error ) );
+				}
+			},
+		} );
+	}
+
+	async function setExclusion( input, type, slug, excluded ) {
+		input.disabled = true;
+		try {
+			const response = await apiFetch( { path: NS + '/exclusions', method: 'POST', data: { type, slug, excluded } } );
+			Notices.show( 'success', response.message );
+			return true;
+		} catch ( error ) {
+			Notices.show( 'error', errorMessage( error ) );
+			return false;
+		} finally {
+			input.disabled = false;
+		}
+	}
+
+	async function resumeUpdates( button, type, slug ) {
+		button.disabled = true;
+		try {
+			const response = await apiFetch( { path: NS + '/holds', method: 'POST', data: { type, slug, hold: false } } );
+			replaceRow( response );
+			const chip = button.closest( '.safespot-chip' );
+			if ( chip ) {
+				chip.remove();
+			}
+			Notices.show( 'success', response.message );
+		} catch ( error ) {
+			button.disabled = false;
+			Notices.show( 'error', errorMessage( error ) );
+		}
+	}
+
+	/**
+	 * Queues items and drives the queue from the browser until it finishes.
+	 *
+	 * @param {Array}       items    Items [{ type, slug }].
+	 * @param {HTMLElement} statusEl Status container.
+	 * @param {HTMLElement} trigger  Button that started the run.
+	 */
+	async function runQueue( items, statusEl, trigger ) {
+		if ( ! items.length ) {
+			return;
+		}
+		trigger.disabled = true;
+		statusEl.hidden = false;
+
+		const render = ( status ) => {
+			/* translators: 1: done count, 2: total count. */
+			const text = sprintf( __( 'Saving SafeSpots… %1$d of %2$d', 'tbsh-safespot-restore-points' ), status.done, status.total );
+			statusEl.innerHTML =
+				'<div class="safespot-progress safespot-progress--determinate" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' +
+				esc( status.progress ) +
+				'" aria-label="' +
+				esc( text ) +
+				'"><span class="safespot-progress__bar" style="width:' +
+				esc( status.progress ) +
+				'%"></span></div><p>' +
+				esc( text ) +
+				'</p>';
+		};
+
+		try {
+			let status = await apiFetch( { path: NS + '/queue', method: 'POST', data: { items } } );
+			render( status );
+			while ( status.running ) {
+				status = await apiFetch( { path: NS + '/queue/run', method: 'POST' } );
+				render( status );
+			}
+
+			statusEl.hidden = true;
+			const failed = status.failed || [];
+			if ( failed.length ) {
+				Notices.show(
+					'warning',
+					/* translators: 1: number saved, 2: number failed. */
+					sprintf( __( '%1$d SafeSpots saved, %2$d failed. See the Activity Log for details.', 'tbsh-safespot-restore-points' ), status.done - failed.length, failed.length )
+				);
+			} else {
+				/* translators: %d: number of SafeSpots. */
+				Notices.show( 'success', sprintf( _n( '%d SafeSpot saved.', '%d SafeSpots saved.', status.done, 'tbsh-safespot-restore-points' ), status.done ) );
+			}
+
+			for ( const item of items ) {
+				await refreshItem( item.type, item.slug );
+			}
+			$$( '.safespot-pending li' ).forEach( ( li ) => li.classList.add( 'is-done' ) );
+		} catch ( error ) {
+			statusEl.hidden = true;
+			Notices.show( 'error', errorMessage( error ) );
+		} finally {
+			trigger.disabled = false;
+			updateBulkButton();
+		}
+	}
+
+	function clearLog() {
+		Modal.open( {
+			title: __( 'Clear the activity log?', 'tbsh-safespot-restore-points' ),
+			body: '<p>' + esc( __( 'All log entries are deleted. SafeSpots themselves are not affected.', 'tbsh-safespot-restore-points' ) ) + '</p>',
+			confirmLabel: __( 'Clear log', 'tbsh-safespot-restore-points' ),
+			destructive: true,
+			onConfirm: async () => {
+				Modal.setBusy( true, __( 'Clearing…', 'tbsh-safespot-restore-points' ) );
+				try {
+					const response = await apiFetch( { path: NS + '/log', method: 'DELETE' } );
+					Modal.close();
+					$$( '.safespot-log, .tablenav.bottom, [data-safespot-action="clear-log"]' ).forEach( ( el ) => el.remove() );
+					const empty = document.createElement( 'div' );
+					empty.className = 'safespot-empty';
+					empty.innerHTML = '<span class="dashicons dashicons-list-view" aria-hidden="true"></span><p>' + esc( __( 'No activity recorded yet.', 'tbsh-safespot-restore-points' ) ) + '</p>';
+					$( '.safespot-main' ).appendChild( empty );
+					Notices.show( 'success', response.message );
+				} catch ( error ) {
+					Modal.setBusy( false );
+					Modal.setError( errorMessage( error ) );
+				}
+			},
+		} );
+	}
+
+	async function saveSettings( form ) {
+		const data = {};
+		$$( 'input[name]', form ).forEach( ( input ) => {
+			data[ input.name ] = 'checkbox' === input.type ? input.checked : input.value;
+		} );
+		const submit = $( '[type="submit"]', form );
+		submit.disabled = true;
+		try {
+			const response = await apiFetch( { path: NS + '/settings', method: 'POST', data } );
+			config.settingsSnapshot = !! response.settings.settings_snapshot;
+			Notices.show( 'success', response.message );
+		} catch ( error ) {
+			Notices.show( 'error', errorMessage( error ) );
+		} finally {
+			submit.disabled = false;
+		}
+	}
+
+	/* ------------------------------------------------------------------ *
+	 * Event wiring
+	 * ------------------------------------------------------------------ */
+
+	document.addEventListener( 'click', ( event ) => {
+		const target = event.target.closest( '[data-safespot-action], .safespot-rollback-last' );
+		if ( ! target || ( Modal && Modal.isBusy() ) ) {
+			return;
+		}
+
+		if ( target.classList.contains( 'safespot-rollback-last' ) ) {
+			event.preventDefault();
+			rollbackLast( target.dataset.name );
+			return;
+		}
+
+		const action = target.dataset.safespotAction;
+		const item = itemFrom( target );
+		const point = pointFrom( target );
+
+		switch ( action ) {
+			case 'toggle': {
+				const expanded = 'true' === target.getAttribute( 'aria-expanded' );
+				target.setAttribute( 'aria-expanded', expanded ? 'false' : 'true' );
+				document.getElementById( target.getAttribute( 'aria-controls' ) ).hidden = expanded;
+				item.tbody.classList.toggle( 'is-expanded', ! expanded );
+				break;
+			}
+			case 'save':
+				openSave( item );
+				break;
+			case 'restore':
+				openRestore( item, point );
+				break;
+			case 'note':
+				openNote( item, point );
+				break;
+			case 'lock':
+				toggleLock( target, point );
+				break;
+			case 'delete':
+				openDelete( item, point );
+				break;
+			case 'resume':
+				resumeUpdates( target, item ? item.type : target.dataset.type, item ? item.slug : target.dataset.slug );
+				break;
+			case 'include':
+				setExclusion( target, target.dataset.type, target.dataset.slug, false ).then( ( ok ) => ok && target.closest( '.safespot-chip' ).remove() );
+				break;
+			case 'rollback-last':
+				rollbackLast( target.dataset.name );
+				break;
+			case 'bulk-save':
+				runQueue( selectedItems(), $( '.safespot-queue-status' ), target );
+				break;
+			case 'save-pending':
+				runQueue(
+					$$( '.safespot-pending li' ).map( ( li ) => ( { type: li.dataset.type, slug: li.dataset.slug } ) ),
+					$( '.safespot-queue-status' ),
+					target
+				);
+				break;
+			case 'clear-log':
+				clearLog();
+				break;
+		}
+	} );
+
+	document.addEventListener( 'change', ( event ) => {
+		const target = event.target;
+
+		if ( 'auto' === target.dataset.safespotAction ) {
+			const item = itemFrom( target );
+			setExclusion( target, item.type, item.slug, ! target.checked ).then( ( ok ) => {
+				if ( ! ok ) {
+					target.checked = ! target.checked;
+				}
+			} );
+			return;
+		}
+
+		if ( target.classList.contains( 'safespot-select-all' ) ) {
+			$$( 'tbody.safespot-item:not([hidden]) .safespot-select' ).forEach( ( box ) => {
+				box.checked = target.checked;
+			} );
+			updateBulkButton();
+			return;
+		}
+
+		if ( target.classList.contains( 'safespot-select' ) ) {
+			updateBulkButton();
+			return;
+		}
+
+		if ( 'safespot-filter' === target.id ) {
+			applyFilters();
+		}
+	} );
+
+	const search = $( '#safespot-search' );
+	if ( search ) {
+		search.addEventListener( 'input', applyFilters );
+	}
+
+	const settingsForm = $( '#safespot-settings' );
+	if ( settingsForm ) {
+		settingsForm.addEventListener( 'submit', ( event ) => {
+			event.preventDefault();
+			saveSettings( settingsForm );
+		} );
+	}
+
+	applyFilters();
+
+	const expanded = $( 'tbody.safespot-item.is-expanded' );
+	if ( expanded ) {
+		expanded.scrollIntoView( { block: 'center' } );
+		const toggle = $( '.safespot-toggle', expanded );
+		if ( toggle ) {
+			toggle.focus( { preventScroll: true } );
+		}
+	}
+} )( window.wp, window.safespotAdmin || {} );

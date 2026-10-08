@@ -1,0 +1,25 @@
+# Local build output (release zips are built by GitHub Actions)
+/dist/
+/build/
+
+# Dependencies
+/node_modules/
+/vendor/
+
+# Editor, AI and tooling files
+.idea/
+.vscode/
+.cursor/
+.claude/
+.codex/
+.continue/
+.windsurf/
+.socraticode*
+.cursorrules
+.cursorignore
+
+# OS and logs
+.DS_Store
+Thumbs.db
+*.log
+.env

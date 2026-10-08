@@ -1,0 +1,1702 @@
+# Copyright (C) 2026 SafeSpot
+# This file is distributed under the GPL-2.0-or-later.
+msgid ""
+msgstr ""
+"Project-Id-Version: SafeSpot – Plugin Restore Points 1.0.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/tbsh-safespot-restore-points\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-10-08T11:03:12+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.11.0\n"
+"X-Domain: tbsh-safespot-restore-points\n"
+
+#. Plugin Name of the plugin
+#: tbsh-safespot-restore-points.php
+#: admin/class-safespot-admin.php:62
+msgid "SafeSpot – Plugin Restore Points"
+msgstr ""
+
+#. Plugin URI of the plugin
+#: tbsh-safespot-restore-points.php
+msgid "https://wordpress.org/plugins/tbsh-safespot-restore-points/"
+msgstr ""
+
+#. Description of the plugin
+#: tbsh-safespot-restore-points.php
+msgid "Save restore points (\"SafeSpots\") of any installed plugin or theme and restore that exact version later with one click. Automatic SafeSpots before updates, one-click undo, and fatal-error protection."
+msgstr ""
+
+#. Author of the plugin
+#: tbsh-safespot-restore-points.php
+#: admin/class-safespot-admin.php:63
+#: admin/class-safespot-admin.php:326
+#: admin/views/page.php:17
+#: admin/assets/js/admin.js:511
+msgid "SafeSpot"
+msgstr ""
+
+#. translators: %s: human time difference, e.g. "5 mins".
+#: admin/class-safespot-admin-views.php:158
+msgid "%s ago"
+msgstr ""
+
+#: admin/class-safespot-admin.php:78
+#: admin/class-safespot-admin.php:281
+msgid "Dashboard"
+msgstr ""
+
+#: admin/class-safespot-admin.php:80
+#: admin/views/tab-log.php:52
+#: admin/views/tab-settings.php:52
+msgid "Plugins"
+msgstr ""
+
+#: admin/class-safespot-admin.php:83
+#: admin/views/tab-log.php:53
+#: admin/views/tab-settings.php:53
+msgid "Themes"
+msgstr ""
+
+#: admin/class-safespot-admin.php:85
+msgid "Activity Log"
+msgstr ""
+
+#: admin/class-safespot-admin.php:87
+#: includes/class-safespot-logger.php:45
+msgid "Settings"
+msgstr ""
+
+#: admin/class-safespot-admin.php:97
+msgid "Sorry, you are not allowed to access this page."
+msgstr ""
+
+#. translators: %s: plugin name.
+#: admin/class-safespot-admin.php:199
+msgid "Save a SafeSpot of %s"
+msgstr ""
+
+#: admin/class-safespot-admin.php:200
+#: admin/class-safespot-admin.php:256
+#: admin/views/item.php:125
+#: admin/assets/js/admin.js:410
+#: admin/assets/js/integrations.js:144
+msgid "Save SafeSpot"
+msgstr ""
+
+#. translators: %s: plugin name.
+#: admin/class-safespot-admin.php:215
+msgid "Restore %s from a SafeSpot"
+msgstr ""
+
+#. translators: %d: number of SafeSpots.
+#: admin/class-safespot-admin.php:217
+#: admin/assets/js/integrations.js:152
+msgid "Restore (%d)"
+msgstr ""
+
+#: admin/class-safespot-admin.php:234
+msgid "Updates paused by SafeSpot"
+msgstr ""
+
+#: admin/class-safespot-admin.php:268
+#: admin/views/item.php:93
+#: admin/views/tab-items.php:76
+#: admin/assets/js/integrations.js:152
+msgid "SafeSpots"
+msgstr ""
+
+#. translators: 1: item name, 2: restored version.
+#: admin/class-safespot-admin.php:331
+msgid "%1$s was restored to version %2$s and may have caused an error."
+msgstr ""
+
+#: admin/class-safespot-admin.php:340
+#: admin/views/tab-dashboard.php:95
+#: admin/assets/js/admin.js:660
+msgid "Roll back this restore"
+msgstr ""
+
+#: admin/class-safespot-admin.php:342
+msgid "Open SafeSpot"
+msgstr ""
+
+#: admin/class-safespot-admin.php:362
+msgid "SafeSpot manages files shared by the whole network, so it works from the Network Admin only. Please network activate it."
+msgstr ""
+
+#: admin/class-safespot-admin.php:374
+#: includes/class-safespot-backup.php:254
+#: includes/class-safespot-rest.php:623
+#: includes/class-safespot-rest.php:637
+#: includes/class-safespot-rest.php:689
+#: includes/class-safespot-rest.php:730
+#: includes/class-safespot-restore.php:124
+#: includes/class-safespot-restore.php:382
+msgid "SafeSpot not found."
+msgstr ""
+
+#: admin/class-safespot-admin.php:377
+msgid "Sorry, you are not allowed to download this SafeSpot."
+msgstr ""
+
+#: admin/class-safespot-admin.php:383
+msgid "The SafeSpot archive file is missing."
+msgstr ""
+
+#: admin/class-safespot-admin.php:389
+msgid "Invalid SafeSpot file."
+msgstr ""
+
+#. translators: 1: item name, 2: version.
+#: admin/class-safespot-admin.php:396
+msgid "Downloaded SafeSpot of %1$s %2$s"
+msgstr ""
+
+#. translators: %s: plugin or theme name.
+#: admin/views/item.php:56
+msgid "Select %s"
+msgstr ""
+
+#: admin/views/item.php:66
+msgid "Show SafeSpot history"
+msgstr ""
+
+#. translators: %s: parent theme folder.
+#: admin/views/item.php:77
+msgid "Child of %s"
+msgstr ""
+
+#. translators: %s: version number.
+#: admin/views/item.php:81
+msgid "Update to %s available"
+msgstr ""
+
+#: admin/views/item.php:84
+msgid "Updates paused"
+msgstr ""
+
+#: admin/views/item.php:88
+msgid "Show more details"
+msgstr ""
+
+#: admin/views/item.php:90
+#: admin/views/item.php:154
+#: admin/views/item.php:175
+#: admin/views/tab-items.php:75
+msgid "Version"
+msgstr ""
+
+#: admin/views/item.php:96
+#: admin/views/tab-items.php:77
+msgid "Latest SafeSpot"
+msgstr ""
+
+#: admin/views/item.php:100
+#: admin/views/tab-dashboard.php:79
+#: admin/views/tab-dashboard.php:90
+msgid "Never"
+msgstr ""
+
+#: admin/views/item.php:103
+#: admin/views/tab-items.php:78
+msgid "Storage"
+msgstr ""
+
+#: admin/views/item.php:106
+#: admin/views/tab-items.php:79
+msgid "Auto"
+msgstr ""
+
+#. translators: %s: plugin or theme name.
+#: admin/views/item.php:114
+msgid "Automatic SafeSpots before updates for %s"
+msgstr ""
+
+#: admin/views/item.php:120
+#: admin/views/item.php:160
+#: admin/views/tab-items.php:80
+msgid "Actions"
+msgstr ""
+
+#: admin/views/item.php:130
+msgid "Resume updates"
+msgstr ""
+
+#: admin/views/item.php:142
+msgid "No SafeSpots yet – save one before your next update."
+msgstr ""
+
+#. translators: %s: plugin or theme name.
+#: admin/views/item.php:149
+msgid "SafeSpot history for %s"
+msgstr ""
+
+#: admin/views/item.php:155
+#: admin/views/item.php:181
+#: includes/class-safespot-logger.php:37
+msgid "Saved"
+msgstr ""
+
+#: admin/views/item.php:156
+#: admin/views/item.php:184
+msgid "Size"
+msgstr ""
+
+#: admin/views/item.php:157
+#: admin/views/item.php:185
+#: admin/views/tab-log.php:49
+msgid "Type"
+msgstr ""
+
+#: admin/views/item.php:158
+#: admin/views/item.php:195
+#: admin/assets/js/admin.js:712
+msgid "Note"
+msgstr ""
+
+#: admin/views/item.php:159
+#: admin/views/item.php:198
+msgid "Created by"
+msgstr ""
+
+#: admin/views/item.php:178
+#: admin/assets/js/admin.js:503
+msgid "Current"
+msgstr ""
+
+#: admin/views/item.php:188
+msgid "+ settings"
+msgstr ""
+
+#: admin/views/item.php:192
+msgid "Locked"
+msgstr ""
+
+#: admin/views/item.php:203
+#: admin/assets/js/admin.js:597
+msgid "Restore"
+msgstr ""
+
+#. translators: %s: version.
+#: admin/views/item.php:211
+msgid "Download SafeSpot %s"
+msgstr ""
+
+#: admin/views/item.php:215
+msgid "Edit note"
+msgstr ""
+
+#: admin/views/item.php:218
+msgid "Unlock (allow automatic cleanup)"
+msgstr ""
+
+#: admin/views/item.php:218
+msgid "Lock (protect from automatic cleanup)"
+msgstr ""
+
+#: admin/views/item.php:218
+msgid "Unlock"
+msgstr ""
+
+#: admin/views/item.php:218
+msgid "Lock"
+msgstr ""
+
+#: admin/views/item.php:222
+msgid "Delete SafeSpot"
+msgstr ""
+
+#: admin/views/item.php:222
+msgid "Delete"
+msgstr ""
+
+#: admin/views/page.php:18
+msgid "Plugin & theme restore points"
+msgstr ""
+
+#: admin/views/page.php:23
+msgid "SafeSpot sections"
+msgstr ""
+
+#: admin/views/page.php:41
+msgid "Close dialog"
+msgstr ""
+
+#: admin/views/page.php:51
+msgid "Cancel"
+msgstr ""
+
+#: admin/views/tab-dashboard.php:40
+msgid "Summary"
+msgstr ""
+
+#: admin/views/tab-dashboard.php:43
+msgid "Total SafeSpots"
+msgstr ""
+
+#: admin/views/tab-dashboard.php:47
+msgid "Auto-SafeSpots before updates: on"
+msgstr ""
+
+#: admin/views/tab-dashboard.php:49
+msgid "Auto-SafeSpots before updates: off"
+msgstr ""
+
+#: admin/views/tab-dashboard.php:56
+#: admin/views/tab-settings.php:206
+msgid "Storage used"
+msgstr ""
+
+#: admin/views/tab-dashboard.php:60
+msgid "Share of free disk space used by SafeSpots"
+msgstr ""
+
+#. translators: %s: free disk space.
+#: admin/views/tab-dashboard.php:66
+msgid "%s free on disk"
+msgstr ""
+
+#: admin/views/tab-dashboard.php:74
+msgid "Last backup"
+msgstr ""
+
+#: admin/views/tab-dashboard.php:85
+msgid "Last restore"
+msgstr ""
+
+#: admin/views/tab-dashboard.php:104
+msgid "Recent activity"
+msgstr ""
+
+#: admin/views/tab-dashboard.php:105
+msgid "View all"
+msgstr ""
+
+#: admin/views/tab-dashboard.php:110
+msgid "No activity yet. Save your first SafeSpot from the Plugins or Themes tab."
+msgstr ""
+
+#: admin/views/tab-dashboard.php:132
+msgid "Updates waiting"
+msgstr ""
+
+#: admin/views/tab-dashboard.php:137
+msgid "Everything is up to date."
+msgstr ""
+
+#: admin/views/tab-dashboard.php:140
+msgid "Save a SafeSpot of these before you update them."
+msgstr ""
+
+#: admin/views/tab-dashboard.php:153
+msgid "Save SafeSpots for all of these"
+msgstr ""
+
+#: admin/views/tab-items.php:15
+msgid "You do not have permission to manage these SafeSpots."
+msgstr ""
+
+#: admin/views/tab-items.php:27
+msgid "plugins"
+msgstr ""
+
+#: admin/views/tab-items.php:27
+msgid "themes"
+msgstr ""
+
+#. translators: %s: "plugins" or "themes".
+#: admin/views/tab-items.php:34
+msgid "Search %s"
+msgstr ""
+
+#. translators: %s: "plugins" or "themes".
+#: admin/views/tab-items.php:38
+msgid "Search %s…"
+msgstr ""
+
+#: admin/views/tab-items.php:41
+#: admin/views/tab-log.php:56
+msgid "Filter"
+msgstr ""
+
+#: admin/views/tab-items.php:43
+msgid "All"
+msgstr ""
+
+#: admin/views/tab-items.php:44
+msgid "With SafeSpots"
+msgstr ""
+
+#: admin/views/tab-items.php:45
+msgid "Without SafeSpots"
+msgstr ""
+
+#: admin/views/tab-items.php:46
+msgid "Update available"
+msgstr ""
+
+#: admin/views/tab-items.php:47
+#: includes/class-safespot-items.php:209
+msgid "Active"
+msgstr ""
+
+#: admin/views/tab-items.php:48
+#: includes/class-safespot-items.php:212
+#: includes/class-safespot-restore.php:244
+#: admin/assets/js/admin.js:505
+msgid "Not installed"
+msgstr ""
+
+#: admin/views/tab-items.php:54
+msgid "Save SafeSpots for selected"
+msgstr ""
+
+#: admin/views/tab-items.php:64
+msgid "Nothing installed yet."
+msgstr ""
+
+#: admin/views/tab-items.php:71
+msgid "Select all"
+msgstr ""
+
+#: admin/views/tab-items.php:74
+msgid "Plugin"
+msgstr ""
+
+#: admin/views/tab-items.php:74
+msgid "Theme"
+msgstr ""
+
+#: admin/views/tab-items.php:79
+msgid "Automatic SafeSpot before updates"
+msgstr ""
+
+#: admin/views/tab-items.php:98
+msgid "Nothing matches your search."
+msgstr ""
+
+#: admin/views/tab-log.php:28
+msgid "Search the activity log"
+msgstr ""
+
+#: admin/views/tab-log.php:30
+msgid "Search…"
+msgstr ""
+
+#: admin/views/tab-log.php:33
+#: admin/views/tab-log.php:76
+#: admin/views/tab-log.php:87
+msgid "Action"
+msgstr ""
+
+#: admin/views/tab-log.php:35
+msgid "All actions"
+msgstr ""
+
+#: admin/views/tab-log.php:41
+#: admin/views/tab-log.php:77
+#: admin/views/tab-log.php:88
+msgid "Status"
+msgstr ""
+
+#: admin/views/tab-log.php:43
+msgid "All statuses"
+msgstr ""
+
+#: admin/views/tab-log.php:51
+msgid "Plugins and themes"
+msgstr ""
+
+#: admin/views/tab-log.php:61
+#: admin/assets/js/admin.js:881
+msgid "Clear log"
+msgstr ""
+
+#: admin/views/tab-log.php:69
+#: admin/assets/js/admin.js:891
+msgid "No activity recorded yet."
+msgstr ""
+
+#: admin/views/tab-log.php:75
+#: admin/views/tab-log.php:86
+msgid "When"
+msgstr ""
+
+#: admin/views/tab-log.php:78
+#: admin/views/tab-log.php:89
+msgid "Item"
+msgstr ""
+
+#: admin/views/tab-log.php:79
+#: admin/views/tab-log.php:97
+msgid "Details"
+msgstr ""
+
+#: admin/views/tab-log.php:80
+#: admin/views/tab-log.php:98
+msgid "User"
+msgstr ""
+
+#: admin/views/tab-log.php:105
+msgid "Log pages"
+msgstr ""
+
+#. translators: %s: number of entries.
+#: admin/views/tab-log.php:110
+msgid "%s entry"
+msgid_plural "%s entries"
+msgstr[0] ""
+msgstr[1] ""
+
+#: admin/views/tab-settings.php:11
+msgid "You do not have permission to change SafeSpot settings."
+msgstr ""
+
+#: admin/views/tab-settings.php:43
+msgid "Automatic SafeSpots"
+msgstr ""
+
+#: admin/views/tab-settings.php:46
+#: admin/views/tab-settings.php:49
+msgid "Before updates"
+msgstr ""
+
+#: admin/views/tab-settings.php:50
+msgid "Save a SafeSpot automatically before any plugin or theme update"
+msgstr ""
+
+#: admin/views/tab-settings.php:51
+msgid "Covers manual, bulk and automatic background updates, and uploaded zips that replace an installed version."
+msgstr ""
+
+#: admin/views/tab-settings.php:58
+msgid "Before deleting"
+msgstr ""
+
+#: admin/views/tab-settings.php:60
+msgid "Save a SafeSpot before a plugin or theme is deleted, so it can be reinstalled later"
+msgstr ""
+
+#: admin/views/tab-settings.php:64
+msgid "If the SafeSpot fails"
+msgstr ""
+
+#: admin/views/tab-settings.php:66
+msgid "Cancel the update when an automatic SafeSpot cannot be saved"
+msgstr ""
+
+#: admin/views/tab-settings.php:67
+msgid "Safer, but a full disk could then block security updates. When off, the update continues and the failure is logged."
+msgstr ""
+
+#: admin/views/tab-settings.php:71
+msgid "Excluded items"
+msgstr ""
+
+#: admin/views/tab-settings.php:74
+msgid "None. Use the \"Auto\" switch on the Plugins and Themes tabs to exclude specific items."
+msgstr ""
+
+#. translators: %s: item name.
+#: admin/views/tab-settings.php:81
+msgid "Include %s in automatic SafeSpots again"
+msgstr ""
+
+#: admin/views/tab-settings.php:94
+msgid "Retention"
+msgstr ""
+
+#: admin/views/tab-settings.php:97
+msgid "Keep per item"
+msgstr ""
+
+#: admin/views/tab-settings.php:100
+msgid "Newest SafeSpots to keep for each plugin or theme. Locked SafeSpots are never deleted automatically. 0 keeps everything."
+msgstr ""
+
+#: admin/views/tab-settings.php:104
+msgid "Delete older than"
+msgstr ""
+
+#: admin/views/tab-settings.php:106
+msgid "days"
+msgstr ""
+
+#: admin/views/tab-settings.php:107
+msgid "Optional. 0 disables age-based cleanup."
+msgstr ""
+
+#: admin/views/tab-settings.php:111
+msgid "Activity log"
+msgstr ""
+
+#: admin/views/tab-settings.php:113
+msgid "days (0 keeps everything)"
+msgstr ""
+
+#: admin/views/tab-settings.php:120
+#: includes/class-safespot-restore.php:213
+#: admin/assets/js/admin.js:391
+msgid "Settings snapshot"
+msgstr ""
+
+#: admin/views/tab-settings.php:123
+msgid "Include settings"
+msgstr ""
+
+#: admin/views/tab-settings.php:125
+msgid "Also export the item's wp_options rows (and theme_mods for themes) with every SafeSpot by default"
+msgstr ""
+
+#: admin/views/tab-settings.php:126
+msgid "Options are matched by name prefix. You can edit the prefixes per item in the \"Save SafeSpot\" dialog. When restoring you choose between files only or files + settings."
+msgstr ""
+
+#: admin/views/tab-settings.php:127
+msgid "Custom database tables are not included in settings snapshots."
+msgstr ""
+
+#: admin/views/tab-settings.php:134
+msgid "Safety"
+msgstr ""
+
+#: admin/views/tab-settings.php:137
+msgid "After restoring"
+msgstr ""
+
+#: admin/views/tab-settings.php:139
+msgid "Load the site in the background and roll back automatically if the restored version causes a fatal error"
+msgstr ""
+
+#: admin/views/tab-settings.php:143
+msgid "Failure emails"
+msgstr ""
+
+#: admin/views/tab-settings.php:145
+msgid "Email me when an automatic SafeSpot or a restore fails"
+msgstr ""
+
+#: admin/views/tab-settings.php:147
+msgid "Notification email"
+msgstr ""
+
+#: admin/views/tab-settings.php:153
+msgid "Paused updates"
+msgstr ""
+
+#: admin/views/tab-settings.php:156
+msgid "None. When you restore an older version you can pause its updates so it is not updated straight back."
+msgstr ""
+
+#. translators: %s: item name.
+#: admin/views/tab-settings.php:163
+msgid "Resume updates for %s"
+msgstr ""
+
+#: admin/views/tab-settings.php:173
+msgid "Uninstall"
+msgstr ""
+
+#: admin/views/tab-settings.php:175
+msgid "Delete all SafeSpots, settings and the activity log when SafeSpot is deleted"
+msgstr ""
+
+#: admin/views/tab-settings.php:182
+msgid "Save settings"
+msgstr ""
+
+#: admin/views/tab-settings.php:187
+msgid "Storage & environment"
+msgstr ""
+
+#: admin/views/tab-settings.php:191
+msgid "Storage folder"
+msgstr ""
+
+#: admin/views/tab-settings.php:195
+msgid "Protection files"
+msgstr ""
+
+#: admin/views/tab-settings.php:198
+msgid ".htaccess, web.config and index.php present"
+msgstr ""
+
+#: admin/views/tab-settings.php:200
+msgid "Missing"
+msgstr ""
+
+#: admin/views/tab-settings.php:202
+msgid "Downloads are only served through an authenticated handler. On nginx, deny access to this folder in your server config or move it with the safespot_storage_path filter."
+msgstr ""
+
+#. translators: 1: size, 2: number of SafeSpots.
+#: admin/views/tab-settings.php:210
+msgid "%1$s in %2$s SafeSpot"
+msgid_plural "%1$s in %2$s SafeSpots"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: free space.
+#: admin/views/tab-settings.php:213
+msgid "%s free"
+msgstr ""
+
+#: admin/views/tab-settings.php:219
+msgid "Zip engine"
+msgstr ""
+
+#: admin/views/tab-settings.php:220
+msgid "PclZip (ZipArchive is not available)"
+msgstr ""
+
+#: admin/views/tab-settings.php:223
+msgid "Filesystem method"
+msgstr ""
+
+#: admin/views/tab-settings.php:227
+msgid "Background processing"
+msgstr ""
+
+#: admin/views/tab-settings.php:231
+msgid "Action Scheduler"
+msgstr ""
+
+#: admin/views/tab-settings.php:233
+msgid "WP-Cron (DISABLE_WP_CRON is set – make sure a real cron job runs wp-cron.php)"
+msgstr ""
+
+#: admin/views/tab-settings.php:235
+msgid "WP-Cron"
+msgstr ""
+
+#: includes/class-safespot-backup.php:47
+msgid "That plugin or theme is not installed."
+msgstr ""
+
+#: includes/class-safespot-backup.php:54
+#: includes/class-safespot-restore.php:388
+msgid "Another SafeSpot backup or restore is running. Please try again in a moment."
+msgstr ""
+
+#. translators: 1: item name, 2: error message.
+#: includes/class-safespot-backup.php:70
+msgid "Could not save a SafeSpot of %1$s: %2$s"
+msgstr ""
+
+#. translators: 1: item name, 2: version, 3: size, 4: source label.
+#: includes/class-safespot-backup.php:85
+msgid "Saved %1$s %2$s (%3$s) – %4$s"
+msgstr ""
+
+#: includes/class-safespot-backup.php:134
+msgid "There is not enough free disk space to save a SafeSpot."
+msgstr ""
+
+#: includes/class-safespot-backup.php:164
+msgid "Could not move the archive into the storage folder."
+msgstr ""
+
+#. translators: 1: item name, 2: version, 3: date.
+#: includes/class-safespot-backup.php:266
+msgid "Deleted SafeSpot of %1$s %2$s from %3$s"
+msgstr ""
+
+#. translators: %d: number of SafeSpots.
+#: includes/class-safespot-backup.php:314
+msgid "Retention removed %d old SafeSpot."
+msgid_plural "Retention removed %d old SafeSpots."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: error message.
+#: includes/class-safespot-health.php:70
+msgid "The site could not be checked after the restore (loopback request failed: %s)."
+msgstr ""
+
+#. translators: %d: HTTP status code.
+#: includes/class-safespot-health.php:86
+msgid "The site returned HTTP %d after the restore."
+msgstr ""
+
+#: includes/class-safespot-health.php:92
+#: includes/class-safespot-health.php:131
+msgid "The site could not be fully verified after the restore. Please check it manually."
+msgstr ""
+
+#: includes/class-safespot-health.php:104
+msgid "The site loaded without fatal errors."
+msgstr ""
+
+#: includes/class-safespot-health.php:113
+msgid "The site could not be verified after the restore (scrape check failed)."
+msgstr ""
+
+#. translators: 1: error message, 2: file, 3: line.
+#: includes/class-safespot-health.php:120
+msgid "%1$s in %2$s on line %3$d"
+msgstr ""
+
+#. translators: %s: item name.
+#: includes/class-safespot-hooks.php:158
+msgid "Automatic SafeSpot failed: %s"
+msgstr ""
+
+#. translators: %s: error message.
+#: includes/class-safespot-hooks.php:196
+msgid "Update cancelled because SafeSpot could not save a restore point first: %s"
+msgstr ""
+
+#: includes/class-safespot-hooks.php:248
+msgid "Auto – before uploaded zip replaced this version"
+msgstr ""
+
+#. translators: %s: error message.
+#: includes/class-safespot-hooks.php:252
+msgid "Installation cancelled because SafeSpot could not save a restore point first: %s"
+msgstr ""
+
+#. translators: %s: new version.
+#: includes/class-safespot-hooks.php:289
+msgid "Auto – before update to %s"
+msgstr ""
+
+#: includes/class-safespot-hooks.php:291
+#: includes/class-safespot-points.php:349
+msgid "Auto – before update"
+msgstr ""
+
+#: includes/class-safespot-hooks.php:301
+#: includes/class-safespot-hooks.php:312
+#: includes/class-safespot-points.php:351
+msgid "Auto – before delete"
+msgstr ""
+
+#. translators: 1: plugin or theme name, 2: version.
+#: includes/class-safespot-hooks.php:352
+msgid "Updates for %1$s are paused by SafeSpot to keep version %2$s. Resume updates on the SafeSpot screen first."
+msgstr ""
+
+#. translators: 1: item name, 2: restored version, 3: previous version, 4: URL.
+#: includes/class-safespot-hooks.php:425
+msgid "SafeSpot note: %1$s was restored to version %2$s shortly before this error (it was on %3$s). After entering recovery mode with the link above, open SafeSpot and click \"Roll back this restore\": %4$s"
+msgstr ""
+
+#. translators: %s: item name.
+#: includes/class-safespot-hooks.php:455
+msgid "SafeSpot restored %s a few minutes ago. If this error started after that restore, use the recovery mode link that WordPress emailed to the administrator, then click \"Roll back this restore\" on the SafeSpot screen."
+msgstr ""
+
+#: includes/class-safespot-items.php:208
+msgid "Network active"
+msgstr ""
+
+#: includes/class-safespot-items.php:209
+#: includes/class-safespot-restore.php:347
+msgid "Active theme"
+msgstr ""
+
+#: includes/class-safespot-items.php:210
+msgid "Parent of active theme"
+msgstr ""
+
+#: includes/class-safespot-items.php:211
+msgid "Inactive"
+msgstr ""
+
+#: includes/class-safespot-logger.php:38
+msgid "Auto-SafeSpot"
+msgstr ""
+
+#: includes/class-safespot-logger.php:39
+msgid "Restored"
+msgstr ""
+
+#: includes/class-safespot-logger.php:40
+msgid "Rolled back"
+msgstr ""
+
+#: includes/class-safespot-logger.php:41
+msgid "Deleted"
+msgstr ""
+
+#: includes/class-safespot-logger.php:42
+msgid "Cleanup"
+msgstr ""
+
+#: includes/class-safespot-logger.php:43
+msgid "Edited"
+msgstr ""
+
+#: includes/class-safespot-logger.php:44
+msgid "Updates paused/resumed"
+msgstr ""
+
+#: includes/class-safespot-logger.php:46
+msgid "Downloaded"
+msgstr ""
+
+#: includes/class-safespot-logger.php:57
+msgid "Success"
+msgstr ""
+
+#: includes/class-safespot-logger.php:58
+msgid "Failed"
+msgstr ""
+
+#: includes/class-safespot-logger.php:59
+msgid "Warning"
+msgstr ""
+
+#: includes/class-safespot-logger.php:60
+msgid "Info"
+msgstr ""
+
+#: includes/class-safespot-logger.php:211
+#: includes/class-safespot-points.php:313
+msgid "System"
+msgstr ""
+
+#: includes/class-safespot-plugin-upgrader.php:31
+msgid "Single-file plugins are restored without the upgrader."
+msgstr ""
+
+#: includes/class-safespot-points.php:67
+msgid "Could not save the SafeSpot record to the database."
+msgstr ""
+
+#: includes/class-safespot-points.php:346
+msgid "Manual"
+msgstr ""
+
+#: includes/class-safespot-points.php:347
+msgid "WP-CLI"
+msgstr ""
+
+#: includes/class-safespot-points.php:348
+msgid "Bulk"
+msgstr ""
+
+#: includes/class-safespot-points.php:350
+msgid "Auto – before restore"
+msgstr ""
+
+#. translators: 1: item name, 2: version, 3: size.
+#: includes/class-safespot-rest.php:596
+msgid "SafeSpot saved: %1$s %2$s (%3$s)."
+msgstr ""
+
+#: includes/class-safespot-rest.php:641
+msgid "SafeSpot updated."
+msgstr ""
+
+#: includes/class-safespot-rest.php:644
+msgid "Note saved."
+msgstr ""
+
+#: includes/class-safespot-rest.php:648
+msgid "SafeSpot locked. It will never be deleted automatically."
+msgstr ""
+
+#: includes/class-safespot-rest.php:648
+msgid "SafeSpot unlocked."
+msgstr ""
+
+#: includes/class-safespot-rest.php:651
+msgid "Nothing to update."
+msgstr ""
+
+#. translators: 1: item name, 2: version, 3: change.
+#: includes/class-safespot-rest.php:659
+msgid "Edited SafeSpot of %1$s %2$s: %3$s"
+msgstr ""
+
+#. translators: %s: version.
+#: includes/class-safespot-rest.php:702
+msgid "SafeSpot %s deleted."
+msgstr ""
+
+#. translators: %s: item name.
+#: includes/class-safespot-rest.php:782
+msgid "Automatic SafeSpots turned off for %s."
+msgstr ""
+
+#. translators: %s: item name.
+#: includes/class-safespot-rest.php:784
+msgid "Automatic SafeSpots turned on for %s."
+msgstr ""
+
+#. translators: %s: item name.
+#: includes/class-safespot-rest.php:804
+msgid "Updates paused for %s."
+msgstr ""
+
+#. translators: %s: item name.
+#: includes/class-safespot-rest.php:806
+msgid "Updates resumed for %s."
+msgstr ""
+
+#: includes/class-safespot-rest.php:850
+#: includes/class-safespot-rest.php:851
+msgid "Activity log cleared."
+msgstr ""
+
+#: includes/class-safespot-rest.php:875
+msgid "Settings updated."
+msgstr ""
+
+#: includes/class-safespot-rest.php:880
+msgid "Settings saved."
+msgstr ""
+
+#: includes/class-safespot-restore.php:95
+msgid "The SafeSpot archive file is missing from the storage folder."
+msgstr ""
+
+#: includes/class-safespot-restore.php:98
+msgid "The SafeSpot archive failed its SHA-256 checksum. It may be corrupt or modified, so nothing was changed."
+msgstr ""
+
+#: includes/class-safespot-restore.php:142
+#: includes/class-safespot-restore.php:147
+msgid "Archive integrity"
+msgstr ""
+
+#. translators: %s: number of files.
+#: includes/class-safespot-restore.php:149
+msgid "SHA-256 checksum verified, %s file, no unsafe paths."
+msgid_plural "SHA-256 checksum verified, %s files, no unsafe paths."
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/class-safespot-restore.php:154
+msgid "SafeSpot itself"
+msgstr ""
+
+#: includes/class-safespot-restore.php:154
+msgid "SafeSpot cannot restore itself while running. Download this SafeSpot and install it from Plugins → Add New instead."
+msgstr ""
+
+#: includes/class-safespot-restore.php:158
+msgid "File changes allowed"
+msgstr ""
+
+#: includes/class-safespot-restore.php:158
+msgid "File modifications are disabled on this site (DISALLOW_FILE_MODS)."
+msgstr ""
+
+#: includes/class-safespot-restore.php:167
+msgid "PHP version"
+msgstr ""
+
+#. translators: 1: required PHP version, 2: current PHP version.
+#: includes/class-safespot-restore.php:169
+msgid "Requires PHP %1$s, this server runs %2$s."
+msgstr ""
+
+#: includes/class-safespot-restore.php:177
+msgid "WordPress version"
+msgstr ""
+
+#. translators: 1: required WP version, 2: current WP version.
+#: includes/class-safespot-restore.php:179
+msgid "Requires WordPress %1$s, this site runs %2$s."
+msgstr ""
+
+#: includes/class-safespot-restore.php:187
+#: includes/class-safespot-restore.php:192
+msgid "Free disk space"
+msgstr ""
+
+#: includes/class-safespot-restore.php:187
+msgid "The server does not report free disk space, so it could not be checked."
+msgstr ""
+
+#. translators: 1: free space, 2: needed space.
+#: includes/class-safespot-restore.php:194
+msgid "%1$s free, about %2$s needed."
+msgstr ""
+
+#: includes/class-safespot-restore.php:203
+msgid "No other operation running"
+msgstr ""
+
+#: includes/class-safespot-restore.php:203
+msgid "Another SafeSpot backup or restore is in progress. Try again when it finishes."
+msgstr ""
+
+#. translators: %s: number of option rows.
+#: includes/class-safespot-restore.php:215
+msgid "A snapshot of %s settings row is available. Custom database tables are not included."
+msgid_plural "A snapshot of %s settings rows is available. Custom database tables are not included."
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/class-safespot-restore.php:265
+msgid "Write permissions"
+msgstr ""
+
+#: includes/class-safespot-restore.php:272
+msgid "WordPress needs FTP/SSH credentials to change files. Define FS_METHOD and the FTP_* constants in wp-config.php to allow one-click restores."
+msgstr ""
+
+#. translators: %s: filesystem method, e.g. ftpext.
+#: includes/class-safespot-restore.php:275
+msgid "Files will be written using the \"%s\" filesystem method."
+msgstr ""
+
+#. translators: %s: list of folders.
+#: includes/class-safespot-restore.php:298
+msgid "These folders are not writable: %s"
+msgstr ""
+
+#: includes/class-safespot-restore.php:300
+msgid "The target folders are writable."
+msgstr ""
+
+#: includes/class-safespot-restore.php:315
+#: includes/class-safespot-restore.php:317
+#: includes/class-safespot-restore.php:319
+msgid "Activation state"
+msgstr ""
+
+#: includes/class-safespot-restore.php:315
+msgid "This plugin is network activated. It will be deactivated during the restore and network activated again afterwards."
+msgstr ""
+
+#: includes/class-safespot-restore.php:317
+msgid "This plugin is active. The site enters maintenance mode briefly; the plugin is deactivated, replaced and reactivated."
+msgstr ""
+
+#: includes/class-safespot-restore.php:319
+msgid "This plugin is not installed. It will be reinstalled but left inactive."
+msgstr ""
+
+#: includes/class-safespot-restore.php:330
+msgid "Parent theme"
+msgstr ""
+
+#. translators: %s: parent theme folder.
+#: includes/class-safespot-restore.php:332
+msgid "This child theme needs the parent theme \"%s\", which is not installed. Restore or install the parent theme first."
+msgstr ""
+
+#: includes/class-safespot-restore.php:342
+msgid "Active child theme"
+msgstr ""
+
+#. translators: %s: child theme name.
+#: includes/class-safespot-restore.php:344
+msgid "This is the parent of the active child theme \"%s\". Restoring it changes how the live site looks and works."
+msgstr ""
+
+#: includes/class-safespot-restore.php:347
+msgid "This is the active theme. The site enters maintenance mode for a few seconds while files are replaced."
+msgstr ""
+
+#: includes/class-safespot-restore.php:351
+msgid "Multisite"
+msgstr ""
+
+#: includes/class-safespot-restore.php:351
+msgid "Theme files are shared by every site in the network that uses this theme."
+msgstr ""
+
+#. translators: 1: item name, 2: version, 3: error.
+#: includes/class-safespot-restore.php:414
+msgid "Restore of %1$s %2$s failed: %3$s"
+msgstr ""
+
+#. translators: %s: item name.
+#: includes/class-safespot-restore.php:419
+msgid "SafeSpot restore failed: %s"
+msgstr ""
+
+#. translators: %s: version being restored.
+#: includes/class-safespot-restore.php:482
+msgid "Auto – before restore to %s"
+msgstr ""
+
+#. translators: %s: error message.
+#: includes/class-safespot-restore.php:490
+msgid "Could not save a safety SafeSpot of the current version, so the restore was cancelled: %s"
+msgstr ""
+
+#. translators: %s: error message.
+#: includes/class-safespot-restore.php:521
+msgid "Automatic rollback also failed: %s. Restore the safety SafeSpot manually."
+msgstr ""
+
+#: includes/class-safespot-restore.php:523
+msgid "The previous version was put back automatically."
+msgstr ""
+
+#. translators: 1: item name, 2: version.
+#: includes/class-safespot-restore.php:577
+msgid "Reinstalled %1$s %2$s from its SafeSpot."
+msgstr ""
+
+#. translators: 1: item name, 2: old version, 3: restored version.
+#: includes/class-safespot-restore.php:580
+msgid "Restored %1$s from %2$s to %3$s."
+msgstr ""
+
+#. translators: %s: PHP error.
+#: includes/class-safespot-restore.php:620
+msgid "The restored version caused a fatal error: %s."
+msgstr ""
+
+#: includes/class-safespot-restore.php:625
+msgid "The plugin was deactivated to keep the site online."
+msgstr ""
+
+#. translators: %s: error message.
+#: includes/class-safespot-restore.php:633
+msgid "Automatic rollback failed: %s. Use the recovery mode link WordPress emails to the administrator, then restore the safety SafeSpot."
+msgstr ""
+
+#: includes/class-safespot-restore.php:645
+msgid "SafeSpot rolled back to the previous version automatically. Nothing else was changed."
+msgstr ""
+
+#: includes/class-safespot-restore.php:665
+msgid "There is no recent restore to roll back."
+msgstr ""
+
+#: includes/class-safespot-restore.php:671
+msgid "The safety SafeSpot for the last restore no longer exists."
+msgstr ""
+
+#. translators: 1: item name, 2: version.
+#: includes/class-safespot-restore.php:689
+msgid "Rolled back the last restore. %1$s is back on version %2$s."
+msgstr ""
+
+#. translators: %s: error message.
+#: includes/class-safespot-restore.php:800
+msgid "The files were restored, but the plugin could not be reactivated: %s"
+msgstr ""
+
+#: includes/class-safespot-restore.php:830
+msgid "The plugin file was not found in the archive."
+msgstr ""
+
+#: includes/class-safespot-restore.php:837
+msgid "Could not copy the plugin file into place."
+msgstr ""
+
+#: includes/class-safespot-restore.php:858
+msgid "WordPress could not access the filesystem. Define FS_METHOD (and FTP credentials if needed) in wp-config.php."
+msgstr ""
+
+#: includes/class-safespot-settings-snapshot.php:122
+msgid "The settings snapshot does not belong to this item."
+msgstr ""
+
+#: includes/class-safespot-settings-snapshot.php:232
+msgid "Could not write the settings snapshot."
+msgstr ""
+
+#: includes/class-safespot-settings-snapshot.php:249
+msgid "This SafeSpot has no settings snapshot."
+msgstr ""
+
+#: includes/class-safespot-settings-snapshot.php:256
+msgid "The settings snapshot file is missing."
+msgstr ""
+
+#: includes/class-safespot-settings-snapshot.php:259
+msgid "The settings snapshot failed its checksum and will not be used."
+msgstr ""
+
+#: includes/class-safespot-settings-snapshot.php:263
+msgid "The settings snapshot could not be read."
+msgstr ""
+
+#: includes/class-safespot-storage.php:113
+msgid "SafeSpot could not create its storage folder. Check that the uploads folder is writable."
+msgstr ""
+
+#: includes/class-safespot-storage.php:122
+msgid "The SafeSpot storage folder is not writable."
+msgstr ""
+
+#: includes/class-safespot-storage.php:179
+msgid "Invalid SafeSpot file name."
+msgstr ""
+
+#: includes/class-safespot-storage.php:245
+msgid "SafeSpot could not create its temporary folder."
+msgstr ""
+
+#: includes/class-safespot-upgrader-skin.php:43
+msgid "WordPress could not install the SafeSpot files. Check file permissions or your filesystem credentials (FS_METHOD)."
+msgstr ""
+
+#: includes/class-safespot-zip.php:49
+msgid "The plugin or theme files could not be found."
+msgstr ""
+
+#. translators: %s: file path.
+#: includes/class-safespot-zip.php:142
+msgid "This file is not readable: %s"
+msgstr ""
+
+#. translators: %s: error code.
+#: includes/class-safespot-zip.php:199
+msgid "Could not create the archive (ZipArchive error %s)."
+msgstr ""
+
+#. translators: %s: file path.
+#: includes/class-safespot-zip.php:211
+msgid "Could not add a file to the archive: %s"
+msgstr ""
+
+#: includes/class-safespot-zip.php:218
+#: includes/class-safespot-zip.php:228
+msgid "Could not write the archive. The disk may be full."
+msgstr ""
+
+#: includes/class-safespot-zip.php:222
+msgid "Could not reopen the archive while writing."
+msgstr ""
+
+#: includes/class-safespot-zip.php:253
+msgid "There are no files to archive."
+msgstr ""
+
+#. translators: %s: PclZip error.
+#: includes/class-safespot-zip.php:261
+msgid "Could not create the archive: %s"
+msgstr ""
+
+#: includes/class-safespot-zip.php:274
+msgid "The SafeSpot archive is missing or unreadable."
+msgstr ""
+
+#: includes/class-safespot-zip.php:283
+#: includes/class-safespot-zip.php:318
+msgid "The SafeSpot archive is corrupt and cannot be opened."
+msgstr ""
+
+#: includes/class-safespot-zip.php:288
+#: includes/class-safespot-zip.php:321
+msgid "The archive contains too many files."
+msgstr ""
+
+#: includes/class-safespot-zip.php:294
+msgid "The SafeSpot archive is corrupt and cannot be read."
+msgstr ""
+
+#: includes/class-safespot-zip.php:352
+msgid "The SafeSpot archive is empty."
+msgstr ""
+
+#. translators: %s: archive entry.
+#: includes/class-safespot-zip.php:362
+msgid "The archive contains a symbolic link, which is not allowed: %s"
+msgstr ""
+
+#. translators: %s: archive entry.
+#: includes/class-safespot-zip.php:367
+msgid "The archive contains an unsafe path: %s"
+msgstr ""
+
+#. translators: 1: archive entry, 2: expected folder.
+#: includes/class-safespot-zip.php:373
+msgid "The archive contains \"%1$s\", which is outside the expected folder \"%2$s\"."
+msgstr ""
+
+#. translators: %s: file name.
+#: includes/class-safespot-zip.php:383
+msgid "The archive does not contain the expected main file (%s)."
+msgstr ""
+
+#: admin/assets/js/admin.js:43
+msgid "Something went wrong. Please try again."
+msgstr ""
+
+#: admin/assets/js/admin.js:97
+#: admin/assets/js/integrations.js:34
+msgid "Dismiss this notice."
+msgstr ""
+
+#. translators: %d: number of items.
+#: admin/assets/js/admin.js:354
+msgid "%d item"
+msgid_plural "%d items"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: 1: plugin/theme name, 2: version.
+#: admin/assets/js/admin.js:382
+msgid "Save a restore point of %1$s %2$s. You can restore this exact version later with one click."
+msgstr ""
+
+#: admin/assets/js/admin.js:386
+msgid "Note (optional)"
+msgstr ""
+
+#: admin/assets/js/admin.js:388
+msgid "e.g. Stable before v3.0 update"
+msgstr ""
+
+#: admin/assets/js/admin.js:395
+msgid "Also save a settings snapshot (wp_options rows)"
+msgstr ""
+
+#: admin/assets/js/admin.js:399
+msgid "Option name prefixes"
+msgstr ""
+
+#: admin/assets/js/admin.js:403
+msgid "Comma-separated. Options whose names start with these prefixes are exported. Custom database tables are not included."
+msgstr ""
+
+#. translators: %s: plugin/theme name.
+#: admin/assets/js/admin.js:408
+msgid "Save SafeSpot: %s"
+msgstr ""
+
+#: admin/assets/js/admin.js:422
+msgid "Creating the archive… large plugins can take a minute."
+msgstr ""
+
+#: admin/assets/js/admin.js:442
+msgid "Roll back to an older version."
+msgstr ""
+
+#: admin/assets/js/admin.js:443
+msgid "Reinstall the same version (replaces any edited or corrupted files)."
+msgstr ""
+
+#: admin/assets/js/admin.js:444
+msgid "Restore a newer version than the one installed."
+msgstr ""
+
+#: admin/assets/js/admin.js:445
+msgid "This item is not installed. It will be reinstalled from the SafeSpot."
+msgstr ""
+
+#. translators: %s: version.
+#: admin/assets/js/admin.js:455
+msgid "Roll back to %s"
+msgstr ""
+
+#. translators: %s: version.
+#: admin/assets/js/admin.js:459
+msgid "Reinstall %s"
+msgstr ""
+
+#. translators: %s: version.
+#: admin/assets/js/admin.js:462
+msgid "Restore version %s"
+msgstr ""
+
+#: admin/assets/js/admin.js:472
+msgid "Will change"
+msgstr ""
+
+#: admin/assets/js/admin.js:473
+msgid "Will be added back"
+msgstr ""
+
+#: admin/assets/js/admin.js:474
+msgid "Will be removed"
+msgstr ""
+
+#: admin/assets/js/admin.js:477
+msgid "The files on disk are identical to this SafeSpot."
+msgstr ""
+
+#. translators: 1: changed files, 2: added files, 3: removed files, 4: unchanged files.
+#: admin/assets/js/admin.js:483
+msgid "File changes: %1$d changed, %2$d added back, %3$d removed (%4$d unchanged)"
+msgstr ""
+
+#: admin/assets/js/admin.js:492
+msgid "List shortened."
+msgstr ""
+
+#: admin/assets/js/admin.js:499
+msgid "theme"
+msgstr ""
+
+#: admin/assets/js/admin.js:499
+msgid "plugin"
+msgstr ""
+
+#: admin/assets/js/admin.js:527
+msgid "Pre-restore checks"
+msgstr ""
+
+#: admin/assets/js/admin.js:549
+msgid "What to restore"
+msgstr ""
+
+#: admin/assets/js/admin.js:551
+msgid "Files only"
+msgstr ""
+
+#. translators: %d: number of settings rows.
+#: admin/assets/js/admin.js:555
+msgid "Files + settings (%d option rows)"
+msgstr ""
+
+#: admin/assets/js/admin.js:558
+msgid "Settings restore overwrites the matching wp_options rows. Custom database tables are not included."
+msgstr ""
+
+#: admin/assets/js/admin.js:561
+msgid "Only files are restored. Database changes made by a newer version (custom tables, migrated options) are not undone."
+msgstr ""
+
+#. translators: %s: "plugin" or "theme".
+#: admin/assets/js/admin.js:571
+msgid "Pause updates for this %s afterwards, so it is not updated straight back"
+msgstr ""
+
+#: admin/assets/js/admin.js:577
+msgid "A SafeSpot of the current version is saved first, so you can undo this restore."
+msgstr ""
+
+#. translators: %s: plugin/theme name.
+#: admin/assets/js/admin.js:595
+msgid "Restore %s"
+msgstr ""
+
+#: admin/assets/js/admin.js:596
+msgid "Running pre-restore checks…"
+msgstr ""
+
+#: admin/assets/js/admin.js:623
+msgid "Saving a safety SafeSpot of the current version…"
+msgstr ""
+
+#: admin/assets/js/admin.js:623
+msgid "Verifying the archive…"
+msgstr ""
+
+#: admin/assets/js/admin.js:624
+msgid "Verifying the archive checksum…"
+msgstr ""
+
+#: admin/assets/js/admin.js:625
+msgid "Replacing files…"
+msgstr ""
+
+#: admin/assets/js/admin.js:626
+msgid "Checking that the site still loads…"
+msgstr ""
+
+#: admin/assets/js/admin.js:646
+msgid "Undo this restore"
+msgstr ""
+
+#: admin/assets/js/admin.js:664
+msgid "The server stopped responding during the restore. The restored version may have caused a fatal error. You can roll back to the safety SafeSpot now."
+msgstr ""
+
+#: admin/assets/js/admin.js:674
+msgid "Rolling back…"
+msgstr ""
+
+#: admin/assets/js/admin.js:693
+msgid "Roll back the last restore?"
+msgstr ""
+
+#. translators: %s: plugin/theme name.
+#: admin/assets/js/admin.js:698
+msgid "%s will be put back exactly as it was before the last restore, using the automatic safety SafeSpot."
+msgstr ""
+
+#: admin/assets/js/admin.js:701
+msgid "Roll back"
+msgstr ""
+
+#. translators: %s: version.
+#: admin/assets/js/admin.js:709
+msgid "Edit note – %s"
+msgstr ""
+
+#: admin/assets/js/admin.js:716
+msgid "Save note"
+msgstr ""
+
+#: admin/assets/js/admin.js:718
+msgid "Saving…"
+msgstr ""
+
+#. translators: 1: plugin/theme name, 2: version, 3: date.
+#: admin/assets/js/admin.js:757
+msgid "Delete the SafeSpot of %1$s %2$s saved on %3$s? The archive is removed permanently."
+msgstr ""
+
+#: admin/assets/js/admin.js:761
+msgid "This SafeSpot is locked to protect it from cleanup."
+msgstr ""
+
+#: admin/assets/js/admin.js:765
+msgid "Delete SafeSpot?"
+msgstr ""
+
+#: admin/assets/js/admin.js:767
+msgid "Delete permanently"
+msgstr ""
+
+#: admin/assets/js/admin.js:770
+msgid "Deleting…"
+msgstr ""
+
+#. translators: 1: done count, 2: total count.
+#: admin/assets/js/admin.js:830
+msgid "Saving SafeSpots… %1$d of %2$d"
+msgstr ""
+
+#. translators: 1: number saved, 2: number failed.
+#: admin/assets/js/admin.js:857
+msgid "%1$d SafeSpots saved, %2$d failed. See the Activity Log for details."
+msgstr ""
+
+#. translators: %d: number of SafeSpots.
+#: admin/assets/js/admin.js:861
+msgid "%d SafeSpot saved."
+msgid_plural "%d SafeSpots saved."
+msgstr[0] ""
+msgstr[1] ""
+
+#: admin/assets/js/admin.js:879
+msgid "Clear the activity log?"
+msgstr ""
+
+#: admin/assets/js/admin.js:880
+msgid "All log entries are deleted. SafeSpots themselves are not affected."
+msgstr ""
+
+#: admin/assets/js/admin.js:884
+msgid "Clearing…"
+msgstr ""
+
+#: admin/assets/js/integrations.js:62
+msgid "Saving SafeSpot…"
+msgstr ""
+
+#: admin/assets/js/integrations.js:66
+msgid "SafeSpot saved"
+msgstr ""
+
+#: admin/assets/js/integrations.js:73
+msgid "Could not save the SafeSpot."
+msgstr ""
+
+#. translators: %s: plugin/theme name.
+#: admin/assets/js/integrations.js:92
+msgid "Roll back %s to the version it had before the last restore?"
+msgstr ""
+
+#: admin/assets/js/integrations.js:105
+msgid "The rollback failed."
+msgstr ""

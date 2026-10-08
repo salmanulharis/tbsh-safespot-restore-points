@@ -1,0 +1,146 @@
+name: Release
+
+# Runs only when a version tag is pushed (e.g. 1.0.0, 1.0.0.1, 1.0.1-rc1). Normal commits do nothing.
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+      - '[0-9]+.[0-9]+.[0-9]+-rc[0-9]+'
+      - '[0-9]+.[0-9]+.[0-9]+.[0-9]+'
+      - '[0-9]+.[0-9]+.[0-9]+.[0-9]+-rc[0-9]+'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  PLUGIN_SLUG: tbsh-safespot-restore-points
+
+jobs:
+  build:
+    name: Build release zip
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate tag and plugin version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+
+          if ! echo "$TAG" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?(-rc[0-9]+)?$'; then
+            echo "::error::Tag '$TAG' is not a release version (expected 1.2.3, 1.2.3.4 or 1.2.3-rc1)."
+            exit 1
+          fi
+
+          BASE_VERSION="${TAG%%-rc*}"
+          PRERELEASE=false
+          [ "$TAG" != "$BASE_VERSION" ] && PRERELEASE=true
+
+          HEADER_VERSION=$(grep -m1 -E '^[[:space:]]*\*[[:space:]]*Version:' "${PLUGIN_SLUG}.php" | sed -E 's/.*Version:[[:space:]]*//' | tr -d '[:space:]')
+          CONSTANT_VERSION=$(grep -m1 -oE "SAFESPOT_VERSION',[[:space:]]*'[^']+'" "${PLUGIN_SLUG}.php" | sed -E "s/.*'([^']+)'$/\1/")
+          STABLE_TAG=$(grep -m1 -E '^Stable tag:' readme.txt | sed -E 's/^Stable tag:[[:space:]]*//' | tr -d '[:space:]')
+
+          echo "Tag: $TAG | header: $HEADER_VERSION | constant: $CONSTANT_VERSION | readme stable tag: $STABLE_TAG"
+
+          if [ "$HEADER_VERSION" != "$BASE_VERSION" ] || [ "$CONSTANT_VERSION" != "$BASE_VERSION" ]; then
+            echo "::error::Tag $TAG does not match the plugin header Version ($HEADER_VERSION) / SAFESPOT_VERSION ($CONSTANT_VERSION)."
+            exit 1
+          fi
+          if [ "$PRERELEASE" = false ] && [ "$STABLE_TAG" != "$BASE_VERSION" ]; then
+            echo "::error::readme.txt Stable tag ($STABLE_TAG) does not match release $TAG."
+            exit 1
+          fi
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
+
+      - name: Build plugin package
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "build/${PLUGIN_SLUG}"
+
+          # User-facing package: runtime files only.
+          rsync -a \
+            --exclude='build' \
+            --exclude='dist' \
+            --exclude='tests' \
+            --exclude='docs' \
+            --exclude='node_modules' \
+            --exclude='vendor-bin' \
+            --exclude='AGENTS.md' \
+            --exclude='CLAUDE.md' \
+            --exclude='README.md' \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='.gitignore' \
+            --exclude='.gitattributes' \
+            --exclude='.gitlab-ci.yml' \
+            --exclude='.env' \
+            --exclude='.cursor' \
+            --exclude='.claude' \
+            --exclude='.codex' \
+            --exclude='.continue' \
+            --exclude='.windsurf' \
+            --exclude='.idea' \
+            --exclude='.vscode' \
+            --exclude='.socraticode*' \
+            --exclude='.cursorrules' \
+            --exclude='.cursorignore' \
+            --exclude='.editorconfig' \
+            --exclude='.DS_Store' \
+            --exclude='Thumbs.db' \
+            --exclude='phpcs.xml*' \
+            --exclude='.phpcs.xml*' \
+            --exclude='phpunit.xml*' \
+            --exclude='composer.json' \
+            --exclude='composer.lock' \
+            --exclude='package.json' \
+            --exclude='package-lock.json' \
+            --exclude='*.map' \
+            --exclude='*.log' \
+            ./ "build/${PLUGIN_SLUG}/"
+
+          test -f "build/${PLUGIN_SLUG}/${PLUGIN_SLUG}.php" || { echo "::error::Main plugin file missing from package."; exit 1; }
+
+          ZIP_NAME="${PLUGIN_SLUG}-${{ steps.version.outputs.tag }}.zip"
+          (cd build && zip -rq "../${ZIP_NAME}" "${PLUGIN_SLUG}")
+          echo "ZIP_NAME=${ZIP_NAME}" >> "$GITHUB_ENV"
+
+          echo "Package contents:"
+          unzip -l "${ZIP_NAME}"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PLUGIN_SLUG }}-${{ steps.version.outputs.tag }}
+          path: build/${{ env.PLUGIN_SLUG }}
+          if-no-files-found: error
+
+      - name: Create GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.version.outputs.tag }}"
+          FLAGS=()
+          [ "${{ steps.version.outputs.prerelease }}" = "true" ] && FLAGS+=(--prerelease)
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$ZIP_NAME" --clobber
+          else
+            gh release create "$TAG" "$ZIP_NAME" \
+              --title "SafeSpot – Plugin Restore Points ${TAG}" \
+              --generate-notes \
+              --verify-tag \
+              "${FLAGS[@]}"
+          fi

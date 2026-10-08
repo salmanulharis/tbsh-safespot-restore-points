@@ -1,0 +1,1177 @@
+/**
+ * SafeSpot admin styles.
+ *
+ * Follows core admin styling; the accent color follows the user's admin color scheme.
+ *
+ * @package SafeSpot
+ */
+
+/* -------------------------------------------------------------------------
+ * Tokens
+ * ---------------------------------------------------------------------- */
+
+.safespot-wrap,
+.safespot-modal,
+.safespot-notice,
+.safespot-recovery-notice {
+	--safespot-accent: var(--wp-admin-theme-color, #2271b1);
+	--safespot-accent-dark: var(--wp-admin-theme-color-darker-10, #135e96);
+	--safespot-surface: #fff;
+	--safespot-surface-alt: #f6f7f7;
+	--safespot-border: #dcdcde;
+	--safespot-text: #1d2327;
+	--safespot-muted: #646970;
+	--safespot-success: #00a32a;
+	--safespot-success-bg: #edfaef;
+	--safespot-warning: #996800;
+	--safespot-warning-bg: #fcf9e8;
+	--safespot-error: #d63638;
+	--safespot-error-bg: #fcf0f1;
+	--safespot-info: #2271b1;
+	--safespot-info-bg: #f0f6fc;
+	--safespot-radius: 8px;
+	--safespot-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 1px rgba(0, 0, 0, 0.04);
+}
+
+body.admin-color-light .safespot-wrap,
+body.admin-color-light .safespot-modal { --safespot-accent: #0085ba; --safespot-accent-dark: #0073aa; }
+body.admin-color-modern .safespot-wrap,
+body.admin-color-modern .safespot-modal { --safespot-accent: #3858e9; --safespot-accent-dark: #2145e6; }
+body.admin-color-blue .safespot-wrap,
+body.admin-color-blue .safespot-modal { --safespot-accent: #096484; --safespot-accent-dark: #07526c; }
+body.admin-color-coffee .safespot-wrap,
+body.admin-color-coffee .safespot-modal { --safespot-accent: #a37a4f; --safespot-accent-dark: #8a6640; }
+body.admin-color-ectoplasm .safespot-wrap,
+body.admin-color-ectoplasm .safespot-modal { --safespot-accent: #7a8b25; --safespot-accent-dark: #66741f; }
+body.admin-color-midnight .safespot-wrap,
+body.admin-color-midnight .safespot-modal { --safespot-accent: #e14d43; --safespot-accent-dark: #d02c21; }
+body.admin-color-ocean .safespot-wrap,
+body.admin-color-ocean .safespot-modal { --safespot-accent: #627c83; --safespot-accent-dark: #4f656b; }
+body.admin-color-sunrise .safespot-wrap,
+body.admin-color-sunrise .safespot-modal { --safespot-accent: #dd823b; --safespot-accent-dark: #c36822; }
+
+/* Dark admin themes (popular dark-mode plugins and user agents that force dark). */
+body.wp-dark-mode-active .safespot-wrap,
+body.dark-mode .safespot-wrap,
+html[data-theme="dark"] .safespot-wrap,
+body.wp-dark-mode-active .safespot-modal,
+body.dark-mode .safespot-modal,
+html[data-theme="dark"] .safespot-modal {
+	--safespot-surface: #1e1e1e;
+	--safespot-surface-alt: #2c2c2c;
+	--safespot-border: #3c434a;
+	--safespot-text: #f0f0f1;
+	--safespot-muted: #a7aaad;
+	--safespot-success-bg: rgba(0, 163, 42, 0.15);
+	--safespot-warning-bg: rgba(219, 166, 23, 0.15);
+	--safespot-error-bg: rgba(214, 54, 56, 0.15);
+	--safespot-info-bg: rgba(34, 113, 177, 0.18);
+	--safespot-warning: #f0c33c;
+	--safespot-info: #72aee6;
+}
+
+/* -------------------------------------------------------------------------
+ * Header & tabs
+ * ---------------------------------------------------------------------- */
+
+.safespot-wrap {
+	max-width: 1280px;
+	color: var(--safespot-text);
+}
+
+.safespot-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	margin: 8px 0 4px;
+}
+
+.safespot-title {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 10px;
+	padding: 0 !important;
+	font-size: 23px;
+	font-weight: 600;
+}
+
+.safespot-title .dashicons {
+	width: 32px;
+	height: 32px;
+	font-size: 32px;
+	color: var(--safespot-accent);
+}
+
+.safespot-title__sub {
+	font-size: 13px;
+	font-weight: 400;
+	color: var(--safespot-muted);
+}
+
+.safespot-tabs {
+	margin-bottom: 16px;
+}
+
+.safespot-tabs .nav-tab:focus {
+	box-shadow: 0 0 0 2px var(--safespot-accent);
+}
+
+.safespot-notices .notice {
+	margin: 0 0 12px;
+}
+
+.safespot-muted {
+	color: var(--safespot-muted);
+}
+
+/* -------------------------------------------------------------------------
+ * Cards & panels
+ * ---------------------------------------------------------------------- */
+
+.safespot-cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 16px;
+	margin-bottom: 20px;
+}
+
+.safespot-card,
+.safespot-panel {
+	position: relative;
+	padding: 20px;
+	background: var(--safespot-surface);
+	border: 1px solid var(--safespot-border);
+	border-radius: var(--safespot-radius);
+	box-shadow: var(--safespot-shadow);
+}
+
+.safespot-card__icon {
+	position: absolute;
+	top: 18px;
+	right: 18px;
+	width: 28px;
+	height: 28px;
+	font-size: 28px;
+	color: var(--safespot-accent);
+	opacity: 0.25;
+}
+
+.safespot-card__label {
+	margin: 0 0 8px;
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--safespot-muted);
+}
+
+.safespot-card__value {
+	margin: 0;
+	font-size: 28px;
+	font-weight: 600;
+	line-height: 1.2;
+}
+
+.safespot-card__value--small {
+	font-size: 20px;
+}
+
+.safespot-card__meta {
+	margin: 6px 0 0;
+	color: var(--safespot-muted);
+}
+
+.safespot-card__action {
+	margin-top: 12px !important;
+}
+
+.safespot-dot {
+	display: inline-block;
+	width: 8px;
+	height: 8px;
+	margin-right: 6px;
+	border-radius: 50%;
+	background: var(--safespot-muted);
+}
+
+.safespot-dot--on {
+	background: var(--safespot-success);
+}
+
+.safespot-meter {
+	height: 6px;
+	margin-top: 10px;
+	overflow: hidden;
+	border-radius: 3px;
+	background: var(--safespot-surface-alt);
+}
+
+.safespot-meter span {
+	display: block;
+	height: 100%;
+	background: var(--safespot-accent);
+}
+
+.safespot-columns {
+	display: grid;
+	grid-template-columns: 2fr 1fr;
+	gap: 16px;
+}
+
+.safespot-panel {
+	margin-bottom: 16px;
+}
+
+.safespot-panel h2 {
+	margin-top: 0;
+	font-size: 15px;
+}
+
+.safespot-panel__header {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	margin-bottom: 8px;
+}
+
+.safespot-activity {
+	margin: 0;
+}
+
+.safespot-activity__item {
+	display: flex;
+	gap: 10px;
+	padding: 10px 0;
+	margin: 0;
+	border-top: 1px solid var(--safespot-border);
+}
+
+.safespot-activity__item:first-child {
+	border-top: 0;
+}
+
+.safespot-activity__item--success > .dashicons { color: var(--safespot-success); }
+.safespot-activity__item--error > .dashicons { color: var(--safespot-error); }
+.safespot-activity__item--warning > .dashicons { color: var(--safespot-warning); }
+.safespot-activity__item--info > .dashicons { color: var(--safespot-info); }
+
+.safespot-activity__message,
+.safespot-activity__meta {
+	margin: 0;
+}
+
+.safespot-activity__meta {
+	color: var(--safespot-muted);
+	font-size: 12px;
+}
+
+.safespot-pending {
+	margin: 12px 0;
+}
+
+.safespot-pending li {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 0;
+	padding: 6px 0;
+}
+
+.safespot-pending li.is-done::after {
+	content: "\f147";
+	margin-left: auto;
+	font-family: dashicons;
+	color: var(--safespot-success);
+}
+
+/* -------------------------------------------------------------------------
+ * Empty states
+ * ---------------------------------------------------------------------- */
+
+.safespot-empty {
+	padding: 40px 20px;
+	text-align: center;
+	color: var(--safespot-muted);
+}
+
+.safespot-empty .dashicons {
+	width: 40px;
+	height: 40px;
+	font-size: 40px;
+	color: var(--safespot-border);
+}
+
+.safespot-empty p {
+	margin: 8px 0 0;
+	font-size: 14px;
+}
+
+.safespot-empty--inline {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 12px 4px;
+	text-align: left;
+}
+
+.safespot-empty--inline .dashicons {
+	width: 24px;
+	height: 24px;
+	font-size: 24px;
+}
+
+.safespot-empty--inline p {
+	margin: 0;
+}
+
+/* -------------------------------------------------------------------------
+ * Toolbar
+ * ---------------------------------------------------------------------- */
+
+.safespot-toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 12px;
+}
+
+.safespot-toolbar__search {
+	position: relative;
+}
+
+.safespot-toolbar__search .dashicons {
+	position: absolute;
+	top: 50%;
+	left: 8px;
+	transform: translateY(-50%);
+	color: var(--safespot-muted);
+	pointer-events: none;
+}
+
+.safespot-toolbar__search input[type="search"] {
+	min-width: 260px;
+	padding-left: 32px;
+}
+
+.safespot-toolbar__count {
+	margin: 0 0 0 auto;
+	color: var(--safespot-muted);
+}
+
+.safespot-toolbar__end {
+	margin-left: auto !important;
+}
+
+/*
+ * Buttons, with or without a Dashicon. Core sizes buttons with a unitless
+ * line-height that a fixed-size icon must not inherit, so icon and label are
+ * laid out as a centered flex row that works at every core button size.
+ */
+.safespot-wrap .button,
+.safespot-modal .button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	vertical-align: middle;
+}
+
+.safespot-wrap .button[hidden],
+.safespot-modal .button[hidden] {
+	display: none;
+}
+
+/* Narrow containers: let long labels wrap instead of overflowing; one line stays 40px tall. */
+.safespot-panel .button,
+.safespot-card .button {
+	max-width: 100%;
+	padding-top: 8px;
+	padding-bottom: 8px;
+	line-height: 1.4;
+	white-space: normal;
+	text-align: center;
+}
+
+.safespot-wrap .button .dashicons,
+.safespot-modal .button .dashicons {
+	flex: none;
+	width: 16px;
+	height: 16px;
+	margin: 0;
+	font-size: 16px;
+	line-height: 1;
+	vertical-align: middle;
+}
+
+.safespot-queue-status {
+	margin: 0 0 12px;
+	padding: 12px 16px;
+	background: var(--safespot-surface);
+	border: 1px solid var(--safespot-border);
+	border-radius: var(--safespot-radius);
+}
+
+.safespot-queue-status p {
+	margin: 8px 0 0;
+}
+
+/* -------------------------------------------------------------------------
+ * Items table
+ * ---------------------------------------------------------------------- */
+
+.safespot-items {
+	border-radius: var(--safespot-radius);
+	overflow: hidden;
+}
+
+.safespot-items td,
+.safespot-items th {
+	vertical-align: middle;
+}
+
+.safespot-items tbody.safespot-item > tr.safespot-item-row > * {
+	border-top: 1px solid var(--safespot-border);
+}
+
+.safespot-items.striped > tbody.safespot-item:nth-of-type(odd) > tr.safespot-item-row {
+	background: var(--safespot-surface-alt);
+}
+
+.safespot-items .check-column {
+	padding: 8px 0 8px 10px;
+}
+
+.safespot-items .safespot-col-version,
+.safespot-items .safespot-col-count,
+.safespot-items .safespot-col-size,
+.safespot-items .safespot-col-auto {
+	width: 9%;
+}
+
+.safespot-items .safespot-col-latest {
+	width: 13%;
+}
+
+/* Shrink-to-fit: the column is exactly as wide as its widest button plus padding. */
+.safespot-items .safespot-col-actions {
+	width: 1%;
+	padding-right: 12px;
+	padding-left: 12px;
+	white-space: nowrap;
+	text-align: right;
+}
+
+.safespot-log td .dashicons {
+	width: 16px;
+	height: 16px;
+	font-size: 16px;
+	color: var(--safespot-muted);
+	vertical-align: text-bottom;
+}
+
+.safespot-log td:first-child {
+	white-space: nowrap;
+}
+
+.safespot-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 2px 4px 2px 0;
+	margin: 0;
+	border: 0;
+	background: none;
+	color: var(--safespot-text);
+	font-size: 14px;
+	font-weight: 600;
+	text-align: left;
+	cursor: pointer;
+	border-radius: 2px;
+}
+
+.safespot-toggle:hover .safespot-item-name {
+	color: var(--safespot-accent);
+}
+
+.safespot-toggle:focus-visible {
+	outline: 2px solid var(--safespot-accent);
+	outline-offset: 2px;
+}
+
+.safespot-toggle .dashicons {
+	color: var(--safespot-muted);
+	transition: transform 0.15s ease;
+}
+
+.safespot-toggle[aria-expanded="true"] .dashicons {
+	transform: rotate(90deg);
+}
+
+.safespot-item-meta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+	margin: 4px 0 0 24px;
+	color: var(--safespot-muted);
+}
+
+.safespot-item-meta code {
+	padding: 1px 4px;
+	font-size: 11px;
+	background: transparent;
+	overflow-wrap: anywhere;
+}
+
+.safespot-row-actions {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 6px;
+}
+
+/* Core's mobile list-table CSS sets rows to display:flex, which would override [hidden]. */
+.safespot-items tr[hidden] {
+	display: none;
+}
+
+.safespot-history-row > td {
+	padding: 0 12px 12px 44px !important;
+	background: var(--safespot-surface-alt);
+}
+
+.safespot-history {
+	padding: 4px 12px;
+	background: var(--safespot-surface);
+	border: 1px solid var(--safespot-border);
+	border-radius: 6px;
+}
+
+.safespot-history-table {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.safespot-history-table th {
+	padding: 8px;
+	font-size: 12px;
+	font-weight: 500;
+	text-align: left;
+	color: var(--safespot-muted);
+	border-bottom: 1px solid var(--safespot-border);
+}
+
+.safespot-history-table td {
+	padding: 8px;
+	border-bottom: 1px solid var(--safespot-border);
+}
+
+.safespot-history-table tr:last-child td {
+	border-bottom: 0;
+}
+
+.safespot-point.is-locked td:first-child {
+	box-shadow: inset 3px 0 0 var(--safespot-accent);
+}
+
+.safespot-note-cell {
+	max-width: 280px;
+	overflow-wrap: anywhere;
+}
+
+.safespot-point-actions {
+	text-align: right;
+	white-space: nowrap;
+}
+
+.safespot-point-actions .button {
+	margin-left: 2px;
+}
+
+.safespot-point-actions .button-small {
+	min-width: 28px;
+}
+
+.safespot-point-actions .safespot-delete:hover,
+.safespot-point-actions .safespot-delete:focus {
+	color: var(--safespot-error);
+	border-color: var(--safespot-error);
+}
+
+.safespot-lock-icon {
+	width: 16px;
+	height: 16px;
+	font-size: 16px;
+	color: var(--safespot-accent);
+	vertical-align: middle;
+}
+
+/* -------------------------------------------------------------------------
+ * Badges & switch
+ * ---------------------------------------------------------------------- */
+
+.safespot-badge {
+	display: inline-block;
+	padding: 1px 8px;
+	font-size: 11px;
+	font-weight: 500;
+	line-height: 18px;
+	white-space: nowrap;
+	color: var(--safespot-muted);
+	background: var(--safespot-surface-alt);
+	border: 1px solid var(--safespot-border);
+	border-radius: 10px;
+}
+
+.safespot-badge--success { color: var(--safespot-success); background: var(--safespot-success-bg); border-color: transparent; }
+.safespot-badge--warning { color: var(--safespot-warning); background: var(--safespot-warning-bg); border-color: transparent; }
+.safespot-badge--error { color: var(--safespot-error); background: var(--safespot-error-bg); border-color: transparent; }
+.safespot-badge--info,
+.safespot-badge--update { color: var(--safespot-info); background: var(--safespot-info-bg); border-color: transparent; }
+.safespot-badge--auto { color: var(--safespot-accent); background: var(--safespot-info-bg); border-color: transparent; }
+.safespot-badge--manual { color: var(--safespot-text); }
+
+.safespot-switch {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	cursor: pointer;
+}
+
+.safespot-switch input {
+	position: absolute;
+	width: 36px;
+	height: 20px;
+	margin: 0;
+	opacity: 0;
+	cursor: pointer;
+}
+
+.safespot-switch__track {
+	position: relative;
+	width: 36px;
+	height: 20px;
+	background: #8c8f94;
+	border-radius: 10px;
+	transition: background 0.15s ease;
+}
+
+.safespot-switch__track::after {
+	content: "";
+	position: absolute;
+	top: 3px;
+	left: 3px;
+	width: 14px;
+	height: 14px;
+	background: #fff;
+	border-radius: 50%;
+	transition: transform 0.15s ease;
+}
+
+.safespot-switch input:checked + .safespot-switch__track {
+	background: var(--safespot-accent);
+}
+
+.safespot-switch input:checked + .safespot-switch__track::after {
+	transform: translateX(16px);
+}
+
+.safespot-switch input:focus-visible + .safespot-switch__track {
+	box-shadow: 0 0 0 2px var(--safespot-surface), 0 0 0 4px var(--safespot-accent);
+}
+
+.safespot-switch input:disabled + .safespot-switch__track {
+	opacity: 0.5;
+}
+
+/* -------------------------------------------------------------------------
+ * Modal
+ * ---------------------------------------------------------------------- */
+
+.safespot-modal {
+	width: min(640px, calc(100vw - 32px));
+	max-height: calc(100vh - 64px);
+	padding: 0;
+	color: var(--safespot-text);
+	background: var(--safespot-surface);
+	border: 0;
+	border-radius: var(--safespot-radius);
+	box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.safespot-modal::backdrop {
+	background: rgba(0, 0, 0, 0.55);
+}
+
+.safespot-modal__inner {
+	display: flex;
+	flex-direction: column;
+	max-height: calc(100vh - 64px);
+}
+
+.safespot-modal__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 16px 20px;
+	border-bottom: 1px solid var(--safespot-border);
+}
+
+.safespot-modal__title {
+	margin: 0;
+	font-size: 17px;
+}
+
+.safespot-modal__close {
+	padding: 4px;
+	color: var(--safespot-muted);
+	background: none;
+	border: 0;
+	border-radius: 4px;
+	cursor: pointer;
+}
+
+.safespot-modal__close:hover,
+.safespot-modal__close:focus-visible {
+	color: var(--safespot-text);
+	outline: 2px solid var(--safespot-accent);
+}
+
+.safespot-modal__body {
+	padding: 16px 20px;
+	overflow-y: auto;
+}
+
+.safespot-modal__body > :first-child {
+	margin-top: 0;
+}
+
+.safespot-modal__progress {
+	padding: 0 20px 12px;
+}
+
+.safespot-modal__progress-text {
+	margin: 8px 0 0;
+	color: var(--safespot-muted);
+}
+
+.safespot-modal__footer {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	padding: 12px 20px;
+	background: var(--safespot-surface-alt);
+	border-top: 1px solid var(--safespot-border);
+	border-radius: 0 0 var(--safespot-radius) var(--safespot-radius);
+}
+
+.safespot-modal.is-busy .safespot-modal__body {
+	opacity: 0.6;
+	pointer-events: none;
+}
+
+.safespot-button-danger.button-primary {
+	background: var(--safespot-error);
+	border-color: var(--safespot-error);
+}
+
+.safespot-button-danger.button-primary:hover,
+.safespot-button-danger.button-primary:focus {
+	background: #b32d2e;
+	border-color: #b32d2e;
+}
+
+.safespot-label {
+	display: block;
+	margin-bottom: 4px;
+	font-weight: 600;
+}
+
+.safespot-fieldset {
+	margin: 12px 0;
+	padding: 12px;
+	border: 1px solid var(--safespot-border);
+	border-radius: 6px;
+}
+
+.safespot-fieldset legend {
+	padding: 0 4px;
+	font-weight: 600;
+}
+
+.safespot-mode label {
+	display: block;
+	margin: 4px 0;
+}
+
+.safespot-prefixes {
+	margin-top: 10px;
+}
+
+.safespot-loading {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.safespot-loading .spinner {
+	float: none;
+	margin: 0;
+}
+
+.safespot-compare {
+	display: flex;
+	align-items: stretch;
+	gap: 12px;
+}
+
+.safespot-compare__side {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	padding: 12px 14px;
+	background: var(--safespot-surface-alt);
+	border: 1px solid var(--safespot-border);
+	border-radius: 6px;
+}
+
+.safespot-compare__side.is-target {
+	border-color: var(--safespot-accent);
+	box-shadow: inset 0 0 0 1px var(--safespot-accent);
+}
+
+.safespot-compare__label {
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--safespot-muted);
+}
+
+.safespot-compare__version {
+	font-size: 22px;
+	font-weight: 600;
+	line-height: 1.4;
+	overflow-wrap: anywhere;
+}
+
+.safespot-compare__meta {
+	font-size: 12px;
+	color: var(--safespot-muted);
+}
+
+.safespot-compare__arrow {
+	align-self: center;
+	width: 24px;
+	height: 24px;
+	font-size: 24px;
+	color: var(--safespot-muted);
+}
+
+.safespot-direction {
+	margin: 10px 0;
+	font-weight: 500;
+}
+
+.safespot-direction--downgrade { color: var(--safespot-warning); }
+.safespot-direction--install { color: var(--safespot-info); }
+
+.safespot-quote {
+	margin: 8px 0;
+	padding: 6px 12px;
+	font-style: italic;
+	border-left: 3px solid var(--safespot-border);
+}
+
+.safespot-subheading {
+	margin: 16px 0 8px;
+	font-size: 13px;
+}
+
+.safespot-checks {
+	margin: 0;
+}
+
+.safespot-check {
+	display: flex;
+	gap: 8px;
+	margin: 0;
+	padding: 6px 0;
+	border-top: 1px solid var(--safespot-border);
+}
+
+.safespot-check:first-child {
+	border-top: 0;
+}
+
+.safespot-check strong {
+	margin-right: 4px;
+}
+
+.safespot-check--pass > .dashicons { color: var(--safespot-success); }
+.safespot-check--warn > .dashicons { color: var(--safespot-warning); }
+.safespot-check--fail > .dashicons { color: var(--safespot-error); }
+.safespot-check--info > .dashicons { color: var(--safespot-info); }
+
+.safespot-check--fail {
+	background: var(--safespot-error-bg);
+	border-radius: 4px;
+	padding-left: 6px;
+}
+
+.safespot-diff {
+	margin: 12px 0;
+	padding: 8px 12px;
+	background: var(--safespot-surface-alt);
+	border-radius: 6px;
+}
+
+.safespot-diff summary {
+	font-weight: 500;
+	cursor: pointer;
+}
+
+.safespot-diff h4 {
+	margin: 10px 0 4px;
+}
+
+.safespot-diff ul {
+	max-height: 160px;
+	margin: 0;
+	overflow-y: auto;
+}
+
+.safespot-diff li {
+	margin: 0 0 2px;
+}
+
+.safespot-diff-summary {
+	color: var(--safespot-success);
+}
+
+.safespot-info {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 8px 12px;
+	color: var(--safespot-info);
+	background: var(--safespot-info-bg);
+	border-radius: 6px;
+}
+
+.safespot-modal__error {
+	margin: 0 0 12px !important;
+}
+
+/* -------------------------------------------------------------------------
+ * Progress
+ * ---------------------------------------------------------------------- */
+
+.safespot-progress {
+	position: relative;
+	height: 6px;
+	overflow: hidden;
+	background: var(--safespot-surface-alt);
+	border-radius: 3px;
+}
+
+.safespot-progress__bar {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	width: 40%;
+	background: var(--safespot-accent);
+	border-radius: 3px;
+	animation: safespot-indeterminate 1.4s ease-in-out infinite;
+}
+
+.safespot-progress--determinate .safespot-progress__bar {
+	animation: none;
+	transition: width 0.3s ease;
+}
+
+@keyframes safespot-indeterminate {
+	0% { left: -40%; }
+	100% { left: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.safespot-progress__bar { animation: none; width: 100%; opacity: 0.6; }
+	.safespot-toggle .dashicons,
+	.safespot-switch__track,
+	.safespot-switch__track::after { transition: none; }
+}
+
+/* -------------------------------------------------------------------------
+ * Settings
+ * ---------------------------------------------------------------------- */
+
+.safespot-settings .form-table th {
+	width: 200px;
+}
+
+.safespot-settings .notice.inline {
+	margin: 10px 0 0;
+}
+
+.safespot-chip-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin: 0;
+}
+
+.safespot-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	margin: 0;
+	padding: 2px 4px 2px 10px;
+	background: var(--safespot-surface-alt);
+	border: 1px solid var(--safespot-border);
+	border-radius: 14px;
+}
+
+.safespot-chip__remove {
+	display: inline-flex;
+	padding: 0;
+	color: var(--safespot-muted);
+	background: none;
+	border: 0;
+	border-radius: 50%;
+	cursor: pointer;
+}
+
+.safespot-chip__remove:hover,
+.safespot-chip__remove:focus-visible {
+	color: var(--safespot-error);
+	outline: 2px solid var(--safespot-accent);
+}
+
+.safespot-env th {
+	width: 220px;
+	font-weight: 600;
+}
+
+/* -------------------------------------------------------------------------
+ * Native screen integrations
+ * ---------------------------------------------------------------------- */
+
+.safespot-quick-save.is-busy {
+	pointer-events: none;
+	opacity: 0.7;
+}
+
+.safespot-held {
+	color: #996800;
+}
+
+.safespot-held .dashicons {
+	width: 16px;
+	height: 16px;
+	font-size: 16px;
+	vertical-align: text-bottom;
+}
+
+.theme-overlay .safespot-theme-actions {
+	display: inline-flex;
+	gap: 6px;
+	margin-right: 8px;
+}
+
+/* -------------------------------------------------------------------------
+ * Responsive
+ * ---------------------------------------------------------------------- */
+
+@media screen and (max-width: 960px) {
+	.safespot-columns {
+		grid-template-columns: 1fr;
+	}
+}
+
+@media screen and (max-width: 782px) {
+	.safespot-toolbar__search,
+	.safespot-toolbar__search input[type="search"] {
+		width: 100%;
+		min-width: 0;
+	}
+
+	.safespot-toolbar__count {
+		margin-left: 0;
+	}
+
+	/* Core list-table CSS hides secondary columns and labels them via data-colname. */
+	/* Fixed layout, as on core's own tables, stops the 35% cell padding from widening an auto table. */
+	.safespot-items {
+		table-layout: fixed;
+	}
+
+	.safespot-items .safespot-col-actions {
+		width: auto;
+		white-space: normal;
+		text-align: left;
+	}
+
+	.safespot-row-actions {
+		align-items: flex-start;
+	}
+
+	.safespot-history-row > td {
+		flex: 1 1 100%;
+		min-width: 0;
+		padding: 0 8px 8px !important;
+	}
+
+	.safespot-history-row > td::before,
+	.safespot-history-table td.safespot-point-actions::before {
+		display: none !important;
+	}
+
+	.safespot-history-table thead {
+		display: none;
+	}
+
+	.safespot-history-table,
+	.safespot-history-table tbody,
+	.safespot-history-table tr,
+	.safespot-history-table td {
+		display: block;
+	}
+
+	.safespot-history-table tr {
+		padding: 6px 0;
+		border-bottom: 1px solid var(--safespot-border);
+	}
+
+	.safespot-history-table td {
+		position: relative;
+		padding: 4px 8px 4px 35% !important;
+		border: 0;
+	}
+
+	.safespot-history-table td.safespot-point-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+		padding-left: 8px !important;
+		white-space: normal;
+	}
+
+	.safespot-point-actions .button {
+		margin-left: 0;
+	}
+
+	.safespot-compare {
+		flex-direction: column;
+	}
+
+	.safespot-compare__arrow {
+		transform: rotate(90deg);
+	}
+
+	.safespot-settings .form-table th {
+		width: auto;
+	}
+}
