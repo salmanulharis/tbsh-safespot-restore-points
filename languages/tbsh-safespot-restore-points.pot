@@ -2,14 +2,14 @@
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: SafeSpot – Plugin Restore Points 1.0.0\n"
+"Project-Id-Version: SafeSpot – Plugin Restore Points 1.0.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/tbsh-safespot-restore-points\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-08T11:03:12+00:00\n"
+"POT-Creation-Date: 2026-10-08T11:47:29+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.11.0\n"
 "X-Domain: tbsh-safespot-restore-points\n"
@@ -81,7 +81,7 @@ msgstr ""
 
 #: admin/class-safespot-admin.php:200
 #: admin/class-safespot-admin.php:256
-#: admin/views/item.php:125
+#: admin/views/item.php:129
 #: admin/assets/js/admin.js:410
 #: admin/assets/js/integrations.js:144
 msgid "Save SafeSpot"
@@ -103,8 +103,8 @@ msgid "Updates paused by SafeSpot"
 msgstr ""
 
 #: admin/class-safespot-admin.php:268
-#: admin/views/item.php:93
-#: admin/views/tab-items.php:76
+#: admin/views/item.php:94
+#: admin/views/tab-items.php:96
 #: admin/assets/js/integrations.js:152
 msgid "SafeSpots"
 msgstr ""
@@ -115,7 +115,7 @@ msgid "%1$s was restored to version %2$s and may have caused an error."
 msgstr ""
 
 #: admin/class-safespot-admin.php:340
-#: admin/views/tab-dashboard.php:95
+#: admin/views/tab-dashboard.php:101
 #: admin/assets/js/admin.js:660
 msgid "Roll back this restore"
 msgstr ""
@@ -130,10 +130,10 @@ msgstr ""
 
 #: admin/class-safespot-admin.php:374
 #: includes/class-safespot-backup.php:254
-#: includes/class-safespot-rest.php:623
-#: includes/class-safespot-rest.php:637
-#: includes/class-safespot-rest.php:689
-#: includes/class-safespot-rest.php:730
+#: includes/class-safespot-rest.php:624
+#: includes/class-safespot-rest.php:638
+#: includes/class-safespot-rest.php:690
+#: includes/class-safespot-rest.php:731
 #: includes/class-safespot-restore.php:124
 #: includes/class-safespot-restore.php:382
 msgid "SafeSpot not found."
@@ -157,160 +157,168 @@ msgid "Downloaded SafeSpot of %1$s %2$s"
 msgstr ""
 
 #. translators: %s: plugin or theme name.
-#: admin/views/item.php:56
+#: admin/views/item.php:57
 msgid "Select %s"
 msgstr ""
 
-#: admin/views/item.php:66
+#: admin/views/item.php:67
 msgid "Show SafeSpot history"
 msgstr ""
 
 #. translators: %s: parent theme folder.
-#: admin/views/item.php:77
+#: admin/views/item.php:78
 msgid "Child of %s"
 msgstr ""
 
 #. translators: %s: version number.
-#: admin/views/item.php:81
+#: admin/views/item.php:82
 msgid "Update to %s available"
 msgstr ""
 
-#: admin/views/item.php:84
+#: admin/views/item.php:85
 msgid "Updates paused"
 msgstr ""
 
-#: admin/views/item.php:88
+#: admin/views/item.php:89
 msgid "Show more details"
 msgstr ""
 
-#: admin/views/item.php:90
-#: admin/views/item.php:154
-#: admin/views/item.php:175
-#: admin/views/tab-items.php:75
+#: admin/views/item.php:91
+#: admin/views/item.php:158
+#: admin/views/item.php:179
+#: admin/views/tab-items.php:95
 msgid "Version"
 msgstr ""
 
-#: admin/views/item.php:96
-#: admin/views/tab-items.php:77
+#: admin/views/item.php:97
+#: admin/views/tab-items.php:97
 msgid "Latest SafeSpot"
 msgstr ""
 
-#: admin/views/item.php:100
-#: admin/views/tab-dashboard.php:79
-#: admin/views/tab-dashboard.php:90
+#: admin/views/item.php:101
+#: admin/views/tab-dashboard.php:85
+#: admin/views/tab-dashboard.php:96
 msgid "Never"
 msgstr ""
 
-#: admin/views/item.php:103
-#: admin/views/tab-items.php:78
+#: admin/views/item.php:104
+#: admin/views/tab-items.php:98
 msgid "Storage"
 msgstr ""
 
-#: admin/views/item.php:106
-#: admin/views/tab-items.php:79
+#: admin/views/item.php:107
+#: admin/views/tab-items.php:99
 msgid "Auto"
 msgstr ""
 
+#: admin/views/item.php:109
+msgid "Automatic SafeSpots are turned off in Settings."
+msgstr ""
+
 #. translators: %s: plugin or theme name.
-#: admin/views/item.php:114
+#: admin/views/item.php:115
 msgid "Automatic SafeSpots before updates for %s"
 msgstr ""
 
-#: admin/views/item.php:120
-#: admin/views/item.php:160
-#: admin/views/tab-items.php:80
+#: admin/views/item.php:117
+msgid "(turned off in Settings)"
+msgstr ""
+
+#: admin/views/item.php:124
+#: admin/views/item.php:164
+#: admin/views/tab-items.php:100
 msgid "Actions"
 msgstr ""
 
-#: admin/views/item.php:130
+#: admin/views/item.php:134
 msgid "Resume updates"
 msgstr ""
 
-#: admin/views/item.php:142
+#: admin/views/item.php:146
 msgid "No SafeSpots yet – save one before your next update."
 msgstr ""
 
 #. translators: %s: plugin or theme name.
-#: admin/views/item.php:149
+#: admin/views/item.php:153
 msgid "SafeSpot history for %s"
 msgstr ""
 
-#: admin/views/item.php:155
-#: admin/views/item.php:181
+#: admin/views/item.php:159
+#: admin/views/item.php:185
 #: includes/class-safespot-logger.php:37
 msgid "Saved"
 msgstr ""
 
-#: admin/views/item.php:156
-#: admin/views/item.php:184
+#: admin/views/item.php:160
+#: admin/views/item.php:188
 msgid "Size"
 msgstr ""
 
-#: admin/views/item.php:157
-#: admin/views/item.php:185
+#: admin/views/item.php:161
+#: admin/views/item.php:189
 #: admin/views/tab-log.php:49
 msgid "Type"
 msgstr ""
 
-#: admin/views/item.php:158
-#: admin/views/item.php:195
+#: admin/views/item.php:162
+#: admin/views/item.php:199
 #: admin/assets/js/admin.js:712
 msgid "Note"
 msgstr ""
 
-#: admin/views/item.php:159
-#: admin/views/item.php:198
+#: admin/views/item.php:163
+#: admin/views/item.php:202
 msgid "Created by"
 msgstr ""
 
-#: admin/views/item.php:178
+#: admin/views/item.php:182
 #: admin/assets/js/admin.js:503
 msgid "Current"
 msgstr ""
 
-#: admin/views/item.php:188
+#: admin/views/item.php:192
 msgid "+ settings"
 msgstr ""
 
-#: admin/views/item.php:192
+#: admin/views/item.php:196
 msgid "Locked"
 msgstr ""
 
-#: admin/views/item.php:203
+#: admin/views/item.php:207
 #: admin/assets/js/admin.js:597
 msgid "Restore"
 msgstr ""
 
 #. translators: %s: version.
-#: admin/views/item.php:211
+#: admin/views/item.php:215
 msgid "Download SafeSpot %s"
 msgstr ""
 
-#: admin/views/item.php:215
+#: admin/views/item.php:219
 msgid "Edit note"
 msgstr ""
 
-#: admin/views/item.php:218
+#: admin/views/item.php:222
 msgid "Unlock (allow automatic cleanup)"
 msgstr ""
 
-#: admin/views/item.php:218
+#: admin/views/item.php:222
 msgid "Lock (protect from automatic cleanup)"
 msgstr ""
 
-#: admin/views/item.php:218
+#: admin/views/item.php:222
 msgid "Unlock"
 msgstr ""
 
-#: admin/views/item.php:218
+#: admin/views/item.php:222
 msgid "Lock"
 msgstr ""
 
-#: admin/views/item.php:222
+#: admin/views/item.php:226
 msgid "Delete SafeSpot"
 msgstr ""
 
-#: admin/views/item.php:222
+#: admin/views/item.php:226
 msgid "Delete"
 msgstr ""
 
@@ -330,69 +338,77 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-#: admin/views/tab-dashboard.php:40
-msgid "Summary"
-msgstr ""
-
-#: admin/views/tab-dashboard.php:43
-msgid "Total SafeSpots"
-msgstr ""
-
-#: admin/views/tab-dashboard.php:47
+#: admin/views/tab-dashboard.php:18
 msgid "Auto-SafeSpots before updates: on"
 msgstr ""
 
-#: admin/views/tab-dashboard.php:49
+#: admin/views/tab-dashboard.php:20
+msgid "Auto-SafeSpots before updates: plugins only"
+msgstr ""
+
+#: admin/views/tab-dashboard.php:22
+msgid "Auto-SafeSpots before updates: themes only"
+msgstr ""
+
+#: admin/views/tab-dashboard.php:24
 msgid "Auto-SafeSpots before updates: off"
 msgstr ""
 
-#: admin/views/tab-dashboard.php:56
-#: admin/views/tab-settings.php:206
+#: admin/views/tab-dashboard.php:50
+msgid "Summary"
+msgstr ""
+
+#: admin/views/tab-dashboard.php:53
+msgid "Total SafeSpots"
+msgstr ""
+
+#: admin/views/tab-dashboard.php:62
+#: admin/views/tab-settings.php:207
 msgid "Storage used"
 msgstr ""
 
-#: admin/views/tab-dashboard.php:60
+#: admin/views/tab-dashboard.php:66
 msgid "Share of free disk space used by SafeSpots"
 msgstr ""
 
 #. translators: %s: free disk space.
-#: admin/views/tab-dashboard.php:66
+#: admin/views/tab-dashboard.php:72
 msgid "%s free on disk"
 msgstr ""
 
-#: admin/views/tab-dashboard.php:74
+#: admin/views/tab-dashboard.php:80
 msgid "Last backup"
 msgstr ""
 
-#: admin/views/tab-dashboard.php:85
+#: admin/views/tab-dashboard.php:91
 msgid "Last restore"
 msgstr ""
 
-#: admin/views/tab-dashboard.php:104
+#: admin/views/tab-dashboard.php:110
 msgid "Recent activity"
 msgstr ""
 
-#: admin/views/tab-dashboard.php:105
+#: admin/views/tab-dashboard.php:111
 msgid "View all"
 msgstr ""
 
-#: admin/views/tab-dashboard.php:110
+#: admin/views/tab-dashboard.php:116
 msgid "No activity yet. Save your first SafeSpot from the Plugins or Themes tab."
 msgstr ""
 
-#: admin/views/tab-dashboard.php:132
+#: admin/views/tab-dashboard.php:138
 msgid "Updates waiting"
 msgstr ""
 
-#: admin/views/tab-dashboard.php:137
+#: admin/views/tab-dashboard.php:143
 msgid "Everything is up to date."
 msgstr ""
 
-#: admin/views/tab-dashboard.php:140
+#: admin/views/tab-dashboard.php:146
 msgid "Save a SafeSpot of these before you update them."
 msgstr ""
 
-#: admin/views/tab-dashboard.php:153
+#: admin/views/tab-dashboard.php:159
 msgid "Save SafeSpots for all of these"
 msgstr ""
 
@@ -408,74 +424,90 @@ msgstr ""
 msgid "themes"
 msgstr ""
 
+#: admin/views/tab-items.php:31
+msgid "Automatic SafeSpots before updates are turned off, so nothing is saved automatically and the Auto switches below have no effect."
+msgstr ""
+
+#: admin/views/tab-items.php:33
+msgid "Automatic SafeSpots are turned off for plugins, so nothing is saved automatically before plugin updates and the Auto switches below have no effect."
+msgstr ""
+
+#: admin/views/tab-items.php:35
+msgid "Automatic SafeSpots are turned off for themes, so nothing is saved automatically before theme updates and the Auto switches below have no effect."
+msgstr ""
+
+#: admin/views/tab-items.php:42
+msgid "Change this in Settings"
+msgstr ""
+
 #. translators: %s: "plugins" or "themes".
-#: admin/views/tab-items.php:34
+#: admin/views/tab-items.php:54
 msgid "Search %s"
 msgstr ""
 
 #. translators: %s: "plugins" or "themes".
-#: admin/views/tab-items.php:38
+#: admin/views/tab-items.php:58
 msgid "Search %s…"
 msgstr ""
 
-#: admin/views/tab-items.php:41
+#: admin/views/tab-items.php:61
 #: admin/views/tab-log.php:56
 msgid "Filter"
 msgstr ""
 
-#: admin/views/tab-items.php:43
+#: admin/views/tab-items.php:63
 msgid "All"
 msgstr ""
 
-#: admin/views/tab-items.php:44
+#: admin/views/tab-items.php:64
 msgid "With SafeSpots"
 msgstr ""
 
-#: admin/views/tab-items.php:45
+#: admin/views/tab-items.php:65
 msgid "Without SafeSpots"
 msgstr ""
 
-#: admin/views/tab-items.php:46
+#: admin/views/tab-items.php:66
 msgid "Update available"
 msgstr ""
 
-#: admin/views/tab-items.php:47
+#: admin/views/tab-items.php:67
 #: includes/class-safespot-items.php:209
 msgid "Active"
 msgstr ""
 
-#: admin/views/tab-items.php:48
+#: admin/views/tab-items.php:68
 #: includes/class-safespot-items.php:212
 #: includes/class-safespot-restore.php:244
 #: admin/assets/js/admin.js:505
 msgid "Not installed"
 msgstr ""
 
-#: admin/views/tab-items.php:54
+#: admin/views/tab-items.php:74
 msgid "Save SafeSpots for selected"
 msgstr ""
 
-#: admin/views/tab-items.php:64
+#: admin/views/tab-items.php:84
 msgid "Nothing installed yet."
 msgstr ""
 
-#: admin/views/tab-items.php:71
+#: admin/views/tab-items.php:91
 msgid "Select all"
 msgstr ""
 
-#: admin/views/tab-items.php:74
+#: admin/views/tab-items.php:94
 msgid "Plugin"
 msgstr ""
 
-#: admin/views/tab-items.php:74
+#: admin/views/tab-items.php:94
 msgid "Theme"
 msgstr ""
 
-#: admin/views/tab-items.php:79
+#: admin/views/tab-items.php:99
 msgid "Automatic SafeSpot before updates"
 msgstr ""
 
-#: admin/views/tab-items.php:98
+#: admin/views/tab-items.php:118
 msgid "Nothing matches your search."
 msgstr ""
 
@@ -581,195 +613,199 @@ msgstr ""
 msgid "Save a SafeSpot before a plugin or theme is deleted, so it can be reinstalled later"
 msgstr ""
 
-#: admin/views/tab-settings.php:64
+#: admin/views/tab-settings.php:61
+msgid "Applies to the same plugins and themes as automatic SafeSpots before updates."
+msgstr ""
+
+#: admin/views/tab-settings.php:65
 msgid "If the SafeSpot fails"
 msgstr ""
 
-#: admin/views/tab-settings.php:66
+#: admin/views/tab-settings.php:67
 msgid "Cancel the update when an automatic SafeSpot cannot be saved"
 msgstr ""
 
-#: admin/views/tab-settings.php:67
+#: admin/views/tab-settings.php:68
 msgid "Safer, but a full disk could then block security updates. When off, the update continues and the failure is logged."
 msgstr ""
 
-#: admin/views/tab-settings.php:71
+#: admin/views/tab-settings.php:72
 msgid "Excluded items"
 msgstr ""
 
-#: admin/views/tab-settings.php:74
+#: admin/views/tab-settings.php:75
 msgid "None. Use the \"Auto\" switch on the Plugins and Themes tabs to exclude specific items."
 msgstr ""
 
 #. translators: %s: item name.
-#: admin/views/tab-settings.php:81
+#: admin/views/tab-settings.php:82
 msgid "Include %s in automatic SafeSpots again"
 msgstr ""
 
-#: admin/views/tab-settings.php:94
+#: admin/views/tab-settings.php:95
 msgid "Retention"
 msgstr ""
 
-#: admin/views/tab-settings.php:97
+#: admin/views/tab-settings.php:98
 msgid "Keep per item"
 msgstr ""
 
-#: admin/views/tab-settings.php:100
+#: admin/views/tab-settings.php:101
 msgid "Newest SafeSpots to keep for each plugin or theme. Locked SafeSpots are never deleted automatically. 0 keeps everything."
 msgstr ""
 
-#: admin/views/tab-settings.php:104
+#: admin/views/tab-settings.php:105
 msgid "Delete older than"
 msgstr ""
 
-#: admin/views/tab-settings.php:106
+#: admin/views/tab-settings.php:107
 msgid "days"
 msgstr ""
 
-#: admin/views/tab-settings.php:107
+#: admin/views/tab-settings.php:108
 msgid "Optional. 0 disables age-based cleanup."
 msgstr ""
 
-#: admin/views/tab-settings.php:111
+#: admin/views/tab-settings.php:112
 msgid "Activity log"
 msgstr ""
 
-#: admin/views/tab-settings.php:113
+#: admin/views/tab-settings.php:114
 msgid "days (0 keeps everything)"
 msgstr ""
 
-#: admin/views/tab-settings.php:120
+#: admin/views/tab-settings.php:121
 #: includes/class-safespot-restore.php:213
 #: admin/assets/js/admin.js:391
 msgid "Settings snapshot"
 msgstr ""
 
-#: admin/views/tab-settings.php:123
+#: admin/views/tab-settings.php:124
 msgid "Include settings"
 msgstr ""
 
-#: admin/views/tab-settings.php:125
+#: admin/views/tab-settings.php:126
 msgid "Also export the item's wp_options rows (and theme_mods for themes) with every SafeSpot by default"
 msgstr ""
 
-#: admin/views/tab-settings.php:126
+#: admin/views/tab-settings.php:127
 msgid "Options are matched by name prefix. You can edit the prefixes per item in the \"Save SafeSpot\" dialog. When restoring you choose between files only or files + settings."
 msgstr ""
 
-#: admin/views/tab-settings.php:127
+#: admin/views/tab-settings.php:128
 msgid "Custom database tables are not included in settings snapshots."
 msgstr ""
 
-#: admin/views/tab-settings.php:134
+#: admin/views/tab-settings.php:135
 msgid "Safety"
 msgstr ""
 
-#: admin/views/tab-settings.php:137
+#: admin/views/tab-settings.php:138
 msgid "After restoring"
 msgstr ""
 
-#: admin/views/tab-settings.php:139
+#: admin/views/tab-settings.php:140
 msgid "Load the site in the background and roll back automatically if the restored version causes a fatal error"
 msgstr ""
 
-#: admin/views/tab-settings.php:143
+#: admin/views/tab-settings.php:144
 msgid "Failure emails"
 msgstr ""
 
-#: admin/views/tab-settings.php:145
+#: admin/views/tab-settings.php:146
 msgid "Email me when an automatic SafeSpot or a restore fails"
 msgstr ""
 
-#: admin/views/tab-settings.php:147
+#: admin/views/tab-settings.php:148
 msgid "Notification email"
 msgstr ""
 
-#: admin/views/tab-settings.php:153
+#: admin/views/tab-settings.php:154
 msgid "Paused updates"
 msgstr ""
 
-#: admin/views/tab-settings.php:156
+#: admin/views/tab-settings.php:157
 msgid "None. When you restore an older version you can pause its updates so it is not updated straight back."
 msgstr ""
 
 #. translators: %s: item name.
-#: admin/views/tab-settings.php:163
+#: admin/views/tab-settings.php:164
 msgid "Resume updates for %s"
 msgstr ""
 
-#: admin/views/tab-settings.php:173
+#: admin/views/tab-settings.php:174
 msgid "Uninstall"
 msgstr ""
 
-#: admin/views/tab-settings.php:175
+#: admin/views/tab-settings.php:176
 msgid "Delete all SafeSpots, settings and the activity log when SafeSpot is deleted"
 msgstr ""
 
-#: admin/views/tab-settings.php:182
+#: admin/views/tab-settings.php:183
 msgid "Save settings"
 msgstr ""
 
-#: admin/views/tab-settings.php:187
+#: admin/views/tab-settings.php:188
 msgid "Storage & environment"
 msgstr ""
 
-#: admin/views/tab-settings.php:191
+#: admin/views/tab-settings.php:192
 msgid "Storage folder"
 msgstr ""
 
-#: admin/views/tab-settings.php:195
+#: admin/views/tab-settings.php:196
 msgid "Protection files"
 msgstr ""
 
-#: admin/views/tab-settings.php:198
+#: admin/views/tab-settings.php:199
 msgid ".htaccess, web.config and index.php present"
 msgstr ""
 
-#: admin/views/tab-settings.php:200
+#: admin/views/tab-settings.php:201
 msgid "Missing"
 msgstr ""
 
-#: admin/views/tab-settings.php:202
+#: admin/views/tab-settings.php:203
 msgid "Downloads are only served through an authenticated handler. On nginx, deny access to this folder in your server config or move it with the safespot_storage_path filter."
 msgstr ""
 
 #. translators: 1: size, 2: number of SafeSpots.
-#: admin/views/tab-settings.php:210
+#: admin/views/tab-settings.php:211
 msgid "%1$s in %2$s SafeSpot"
 msgid_plural "%1$s in %2$s SafeSpots"
 msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: free space.
-#: admin/views/tab-settings.php:213
+#: admin/views/tab-settings.php:214
 msgid "%s free"
 msgstr ""
 
-#: admin/views/tab-settings.php:219
+#: admin/views/tab-settings.php:220
 msgid "Zip engine"
 msgstr ""
 
-#: admin/views/tab-settings.php:220
+#: admin/views/tab-settings.php:221
 msgid "PclZip (ZipArchive is not available)"
 msgstr ""
 
-#: admin/views/tab-settings.php:223
+#: admin/views/tab-settings.php:224
 msgid "Filesystem method"
 msgstr ""
 
-#: admin/views/tab-settings.php:227
+#: admin/views/tab-settings.php:228
 msgid "Background processing"
 msgstr ""
 
-#: admin/views/tab-settings.php:231
+#: admin/views/tab-settings.php:232
 msgid "Action Scheduler"
 msgstr ""
 
-#: admin/views/tab-settings.php:233
+#: admin/views/tab-settings.php:234
 msgid "WP-Cron (DISABLE_WP_CRON is set – make sure a real cron job runs wp-cron.php)"
 msgstr ""
 
-#: admin/views/tab-settings.php:235
+#: admin/views/tab-settings.php:236
 msgid "WP-Cron"
 msgstr ""
 
@@ -841,52 +877,52 @@ msgid "%1$s in %2$s on line %3$d"
 msgstr ""
 
 #. translators: %s: item name.
-#: includes/class-safespot-hooks.php:158
+#: includes/class-safespot-hooks.php:155
 msgid "Automatic SafeSpot failed: %s"
 msgstr ""
 
 #. translators: %s: error message.
-#: includes/class-safespot-hooks.php:196
+#: includes/class-safespot-hooks.php:193
 msgid "Update cancelled because SafeSpot could not save a restore point first: %s"
 msgstr ""
 
-#: includes/class-safespot-hooks.php:248
+#: includes/class-safespot-hooks.php:245
 msgid "Auto – before uploaded zip replaced this version"
 msgstr ""
 
 #. translators: %s: error message.
-#: includes/class-safespot-hooks.php:252
+#: includes/class-safespot-hooks.php:249
 msgid "Installation cancelled because SafeSpot could not save a restore point first: %s"
 msgstr ""
 
 #. translators: %s: new version.
-#: includes/class-safespot-hooks.php:289
+#: includes/class-safespot-hooks.php:286
 msgid "Auto – before update to %s"
 msgstr ""
 
-#: includes/class-safespot-hooks.php:291
+#: includes/class-safespot-hooks.php:288
 #: includes/class-safespot-points.php:349
 msgid "Auto – before update"
 msgstr ""
 
-#: includes/class-safespot-hooks.php:301
-#: includes/class-safespot-hooks.php:312
+#: includes/class-safespot-hooks.php:298
+#: includes/class-safespot-hooks.php:309
 #: includes/class-safespot-points.php:351
 msgid "Auto – before delete"
 msgstr ""
 
 #. translators: 1: plugin or theme name, 2: version.
-#: includes/class-safespot-hooks.php:352
+#: includes/class-safespot-hooks.php:349
 msgid "Updates for %1$s are paused by SafeSpot to keep version %2$s. Resume updates on the SafeSpot screen first."
 msgstr ""
 
 #. translators: 1: item name, 2: restored version, 3: previous version, 4: URL.
-#: includes/class-safespot-hooks.php:425
+#: includes/class-safespot-hooks.php:422
 msgid "SafeSpot note: %1$s was restored to version %2$s shortly before this error (it was on %3$s). After entering recovery mode with the link above, open SafeSpot and click \"Roll back this restore\": %4$s"
 msgstr ""
 
 #. translators: %s: item name.
-#: includes/class-safespot-hooks.php:455
+#: includes/class-safespot-hooks.php:452
 msgid "SafeSpot restored %s a few minutes ago. If this error started after that restore, use the recovery mode link that WordPress emailed to the administrator, then click \"Roll back this restore\" on the SafeSpot screen."
 msgstr ""
 
@@ -985,42 +1021,42 @@ msgid "Auto – before restore"
 msgstr ""
 
 #. translators: 1: item name, 2: version, 3: size.
-#: includes/class-safespot-rest.php:596
+#: includes/class-safespot-rest.php:597
 msgid "SafeSpot saved: %1$s %2$s (%3$s)."
 msgstr ""
 
-#: includes/class-safespot-rest.php:641
+#: includes/class-safespot-rest.php:642
 msgid "SafeSpot updated."
 msgstr ""
 
-#: includes/class-safespot-rest.php:644
+#: includes/class-safespot-rest.php:645
 msgid "Note saved."
 msgstr ""
 
-#: includes/class-safespot-rest.php:648
+#: includes/class-safespot-rest.php:649
 msgid "SafeSpot locked. It will never be deleted automatically."
 msgstr ""
 
-#: includes/class-safespot-rest.php:648
+#: includes/class-safespot-rest.php:649
 msgid "SafeSpot unlocked."
 msgstr ""
 
-#: includes/class-safespot-rest.php:651
+#: includes/class-safespot-rest.php:652
 msgid "Nothing to update."
 msgstr ""
 
 #. translators: 1: item name, 2: version, 3: change.
-#: includes/class-safespot-rest.php:659
+#: includes/class-safespot-rest.php:660
 msgid "Edited SafeSpot of %1$s %2$s: %3$s"
 msgstr ""
 
 #. translators: %s: version.
-#: includes/class-safespot-rest.php:702
+#: includes/class-safespot-rest.php:703
 msgid "SafeSpot %s deleted."
 msgstr ""
 
 #. translators: %s: item name.
-#: includes/class-safespot-rest.php:782
+#: includes/class-safespot-rest.php:781
 msgid "Automatic SafeSpots turned off for %s."
 msgstr ""
 
@@ -1030,25 +1066,30 @@ msgid "Automatic SafeSpots turned on for %s."
 msgstr ""
 
 #. translators: %s: item name.
-#: includes/class-safespot-rest.php:804
+#: includes/class-safespot-rest.php:787
+msgid "%s is included again, but automatic SafeSpots are turned off in Settings, so nothing is saved automatically until you turn them on there."
+msgstr ""
+
+#. translators: %s: item name.
+#: includes/class-safespot-rest.php:814
 msgid "Updates paused for %s."
 msgstr ""
 
 #. translators: %s: item name.
-#: includes/class-safespot-rest.php:806
+#: includes/class-safespot-rest.php:816
 msgid "Updates resumed for %s."
 msgstr ""
 
-#: includes/class-safespot-rest.php:850
-#: includes/class-safespot-rest.php:851
+#: includes/class-safespot-rest.php:860
+#: includes/class-safespot-rest.php:861
 msgid "Activity log cleared."
 msgstr ""
 
-#: includes/class-safespot-rest.php:875
+#: includes/class-safespot-rest.php:885
 msgid "Settings updated."
 msgstr ""
 
-#: includes/class-safespot-rest.php:880
+#: includes/class-safespot-rest.php:890
 msgid "Settings saved."
 msgstr ""
 

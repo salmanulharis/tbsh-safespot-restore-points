@@ -118,7 +118,8 @@ html[data-theme="dark"] .safespot-modal {
 	box-shadow: 0 0 0 2px var(--safespot-accent);
 }
 
-.safespot-notices .notice {
+.safespot-notices .notice,
+.safespot-auto-notice.notice {
 	margin: 0 0 12px;
 }
 
@@ -683,6 +684,10 @@ html[data-theme="dark"] .safespot-modal {
 
 .safespot-switch input:disabled + .safespot-switch__track {
 	opacity: 0.5;
+}
+
+.safespot-switch input:disabled {
+	cursor: not-allowed;
 }
 
 /* -------------------------------------------------------------------------

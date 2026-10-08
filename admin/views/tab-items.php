@@ -25,6 +25,26 @@ foreach ( SafeSpot_Points::query( array( 'type' => $safespot_type ) ) as $safesp
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only UI state.
 $safespot_open = isset( $_GET['item'] ) ? sanitize_text_field( wp_unslash( $_GET['item'] ) ) : '';
 $safespot_noun = 'plugin' === $safespot_type ? __( 'plugins', 'tbsh-safespot-restore-points' ) : __( 'themes', 'tbsh-safespot-restore-points' );
+
+if ( ! SafeSpot_Settings::auto_backup_enabled( $safespot_type ) ) {
+	if ( ! SafeSpot_Settings::get( 'auto_backup' ) ) {
+		$safespot_auto_message = __( 'Automatic SafeSpots before updates are turned off, so nothing is saved automatically and the Auto switches below have no effect.', 'tbsh-safespot-restore-points' );
+	} elseif ( 'plugin' === $safespot_type ) {
+		$safespot_auto_message = __( 'Automatic SafeSpots are turned off for plugins, so nothing is saved automatically before plugin updates and the Auto switches below have no effect.', 'tbsh-safespot-restore-points' );
+	} else {
+		$safespot_auto_message = __( 'Automatic SafeSpots are turned off for themes, so nothing is saved automatically before theme updates and the Auto switches below have no effect.', 'tbsh-safespot-restore-points' );
+	}
+	?>
+	<div class="notice notice-warning inline safespot-auto-notice">
+		<p>
+			<?php echo esc_html( $safespot_auto_message ); ?>
+			<?php if ( SafeSpot_Permissions::can( 'settings' ) ) : ?>
+				<a href="<?php echo esc_url( SafeSpot_Admin_Views::page_url( array( 'tab' => 'settings' ) ) ); ?>"><?php esc_html_e( 'Change this in Settings', 'tbsh-safespot-restore-points' ); ?></a>
+			<?php endif; ?>
+		</p>
+	</div>
+	<?php
+}
 ?>
 <div class="safespot-toolbar">
 	<div class="safespot-toolbar__search">

@@ -785,7 +785,7 @@
 		input.disabled = true;
 		try {
 			const response = await apiFetch( { path: NS + '/exclusions', method: 'POST', data: { type, slug, excluded } } );
-			Notices.show( 'success', response.message );
+			Notices.show( excluded || false !== response.auto_enabled ? 'success' : 'warning', response.message );
 			return true;
 		} catch ( error ) {
 			Notices.show( 'error', errorMessage( error ) );
@@ -987,6 +987,12 @@
 
 	document.addEventListener( 'change', ( event ) => {
 		const target = event.target;
+
+		if ( target.form && 'safespot-settings' === target.form.id && target.name ) {
+			$$( '[data-safespot-requires="' + target.name + '"]', target.form ).forEach( ( input ) => {
+				input.disabled = ! target.checked;
+			} );
+		}
 
 		if ( 'auto' === target.dataset.safespotAction ) {
 			const item = itemFrom( target );

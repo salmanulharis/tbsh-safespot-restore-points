@@ -12,7 +12,17 @@ $safespot_restored = SafeSpot_Logger::latest( array( 'restore', 'rollback' ) );
 $safespot_last     = SafeSpot_Restore::last_restore();
 $safespot_recent   = SafeSpot_Logger::recent( 8 );
 $safespot_free     = SafeSpot_Storage::free_space();
-$safespot_auto     = (bool) SafeSpot_Settings::get( 'auto_backup' );
+$safespot_auto_p   = SafeSpot_Settings::auto_backup_enabled( 'plugin' );
+$safespot_auto_t   = SafeSpot_Settings::auto_backup_enabled( 'theme' );
+if ( $safespot_auto_p && $safespot_auto_t ) {
+	$safespot_auto_label = __( 'Auto-SafeSpots before updates: on', 'tbsh-safespot-restore-points' );
+} elseif ( $safespot_auto_p ) {
+	$safespot_auto_label = __( 'Auto-SafeSpots before updates: plugins only', 'tbsh-safespot-restore-points' );
+} elseif ( $safespot_auto_t ) {
+	$safespot_auto_label = __( 'Auto-SafeSpots before updates: themes only', 'tbsh-safespot-restore-points' );
+} else {
+	$safespot_auto_label = __( 'Auto-SafeSpots before updates: off', 'tbsh-safespot-restore-points' );
+}
 
 $safespot_pending = array();
 if ( SafeSpot_Permissions::can( 'save', 'plugin' ) ) {
@@ -43,11 +53,7 @@ $safespot_status_icons = array(
 		<h2 class="safespot-card__label"><?php esc_html_e( 'Total SafeSpots', 'tbsh-safespot-restore-points' ); ?></h2>
 		<p class="safespot-card__value"><?php echo esc_html( number_format_i18n( $safespot_stats['total'] ) ); ?></p>
 		<p class="safespot-card__meta">
-			<?php if ( $safespot_auto ) : ?>
-				<span class="safespot-dot safespot-dot--on" aria-hidden="true"></span><?php esc_html_e( 'Auto-SafeSpots before updates: on', 'tbsh-safespot-restore-points' ); ?>
-			<?php else : ?>
-				<span class="safespot-dot" aria-hidden="true"></span><?php esc_html_e( 'Auto-SafeSpots before updates: off', 'tbsh-safespot-restore-points' ); ?>
-			<?php endif; ?>
+			<span class="safespot-dot<?php echo $safespot_auto_p || $safespot_auto_t ? ' safespot-dot--on' : ''; ?>" aria-hidden="true"></span><?php echo esc_html( $safespot_auto_label ); ?>
 		</p>
 	</div>
 

@@ -19,6 +19,7 @@ $safespot_count     = count( $points );
 $safespot_size      = array_sum( wp_list_pluck( $points, 'file_size' ) );
 $safespot_latest    = $safespot_count ? $points[0]['created_ts'] : 0;
 $safespot_excluded  = SafeSpot_Settings::is_excluded( $safespot_type, $safespot_slug );
+$safespot_auto_on   = SafeSpot_Settings::auto_backup_enabled( $safespot_type );
 $safespot_hold      = SafeSpot_Settings::get_hold( $safespot_type, $safespot_slug );
 $safespot_can_save  = $safespot_installed && SafeSpot_Permissions::can( 'save', $safespot_type );
 $safespot_can_rest  = SafeSpot_Permissions::can( 'restore', $safespot_type );
@@ -105,13 +106,16 @@ $safespot_status_class = array(
 		</td>
 		<td class="safespot-col-auto" data-colname="<?php esc_attr_e( 'Auto', 'tbsh-safespot-restore-points' ); ?>">
 			<?php if ( $safespot_installed ) : ?>
-				<label class="safespot-switch">
-					<input type="checkbox" role="switch" data-safespot-action="auto" <?php checked( ! $safespot_excluded ); ?> <?php disabled( ! $safespot_can_save ); ?> />
+				<label class="safespot-switch"<?php echo $safespot_auto_on ? '' : ' title="' . esc_attr__( 'Automatic SafeSpots are turned off in Settings.', 'tbsh-safespot-restore-points' ) . '"'; ?>>
+					<input type="checkbox" role="switch" data-safespot-action="auto" <?php checked( $safespot_auto_on && ! $safespot_excluded ); ?> <?php disabled( ! $safespot_can_save || ! $safespot_auto_on ); ?> />
 					<span class="safespot-switch__track" aria-hidden="true"></span>
 					<span class="screen-reader-text">
 						<?php
 						/* translators: %s: plugin or theme name. */
 						echo esc_html( sprintf( __( 'Automatic SafeSpots before updates for %s', 'tbsh-safespot-restore-points' ), $item['name'] ) );
+						if ( ! $safespot_auto_on ) {
+							echo ' ' . esc_html__( '(turned off in Settings)', 'tbsh-safespot-restore-points' );
+						}
 						?>
 					</span>
 				</label>

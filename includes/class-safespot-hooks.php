@@ -101,10 +101,7 @@ class SafeSpot_Hooks {
 	 * @return bool
 	 */
 	private function should_auto_backup( $type, $slug ) {
-		if ( ! SafeSpot_Settings::get( 'auto_backup' ) ) {
-			return false;
-		}
-		if ( ! SafeSpot_Settings::get( 'plugin' === $type ? 'auto_backup_plugins' : 'auto_backup_themes' ) ) {
+		if ( ! SafeSpot_Settings::auto_backup_enabled( $type ) ) {
 			return false;
 		}
 		if ( SafeSpot_Settings::is_excluded( $type, $slug ) ) {

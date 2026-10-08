@@ -3,7 +3,7 @@
  * Plugin Name:       SafeSpot – Plugin Restore Points
  * Plugin URI:        https://wordpress.org/plugins/tbsh-safespot-restore-points/
  * Description:       Save restore points ("SafeSpots") of any installed plugin or theme and restore that exact version later with one click. Automatic SafeSpots before updates, one-click undo, and fatal-error protection.
- * Version:           1.0.0
+ * Version:           1.0.1
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            SafeSpot
@@ -18,7 +18,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SAFESPOT_VERSION', '1.0.0' );
+define( 'SAFESPOT_VERSION', '1.0.1' );
 define( 'SAFESPOT_DB_VERSION', '1.0.0' );
 define( 'SAFESPOT_FILE', __FILE__ );
 define( 'SAFESPOT_DIR', plugin_dir_path( __FILE__ ) );

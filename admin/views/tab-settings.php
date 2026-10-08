@@ -49,21 +49,22 @@ $safespot_resolve = static function ( $key ) {
 						<legend class="screen-reader-text"><?php esc_html_e( 'Before updates', 'tbsh-safespot-restore-points' ); ?></legend>
 						<label><input type="checkbox" name="auto_backup" value="1" <?php checked( $safespot_s['auto_backup'] ); ?> /> <?php esc_html_e( 'Save a SafeSpot automatically before any plugin or theme update', 'tbsh-safespot-restore-points' ); ?></label>
 						<p class="description"><?php esc_html_e( 'Covers manual, bulk and automatic background updates, and uploaded zips that replace an installed version.', 'tbsh-safespot-restore-points' ); ?></p>
-						<label><input type="checkbox" name="auto_backup_plugins" value="1" <?php checked( $safespot_s['auto_backup_plugins'] ); ?> /> <?php esc_html_e( 'Plugins', 'tbsh-safespot-restore-points' ); ?></label><br />
-						<label><input type="checkbox" name="auto_backup_themes" value="1" <?php checked( $safespot_s['auto_backup_themes'] ); ?> /> <?php esc_html_e( 'Themes', 'tbsh-safespot-restore-points' ); ?></label>
+						<label><input type="checkbox" name="auto_backup_plugins" value="1" data-safespot-requires="auto_backup" <?php checked( $safespot_s['auto_backup_plugins'] ); ?> <?php disabled( ! $safespot_s['auto_backup'] ); ?> /> <?php esc_html_e( 'Plugins', 'tbsh-safespot-restore-points' ); ?></label><br />
+						<label><input type="checkbox" name="auto_backup_themes" value="1" data-safespot-requires="auto_backup" <?php checked( $safespot_s['auto_backup_themes'] ); ?> <?php disabled( ! $safespot_s['auto_backup'] ); ?> /> <?php esc_html_e( 'Themes', 'tbsh-safespot-restore-points' ); ?></label>
 					</fieldset>
 				</td>
 			</tr>
 			<tr>
 				<th scope="row"><?php esc_html_e( 'Before deleting', 'tbsh-safespot-restore-points' ); ?></th>
 				<td>
-					<label><input type="checkbox" name="backup_before_delete" value="1" <?php checked( $safespot_s['backup_before_delete'] ); ?> /> <?php esc_html_e( 'Save a SafeSpot before a plugin or theme is deleted, so it can be reinstalled later', 'tbsh-safespot-restore-points' ); ?></label>
+					<label><input type="checkbox" name="backup_before_delete" value="1" data-safespot-requires="auto_backup" <?php checked( $safespot_s['backup_before_delete'] ); ?> <?php disabled( ! $safespot_s['auto_backup'] ); ?> /> <?php esc_html_e( 'Save a SafeSpot before a plugin or theme is deleted, so it can be reinstalled later', 'tbsh-safespot-restore-points' ); ?></label>
+					<p class="description"><?php esc_html_e( 'Applies to the same plugins and themes as automatic SafeSpots before updates.', 'tbsh-safespot-restore-points' ); ?></p>
 				</td>
 			</tr>
 			<tr>
 				<th scope="row"><?php esc_html_e( 'If the SafeSpot fails', 'tbsh-safespot-restore-points' ); ?></th>
 				<td>
-					<label><input type="checkbox" name="abort_update_on_failure" value="1" <?php checked( $safespot_s['abort_update_on_failure'] ); ?> /> <?php esc_html_e( 'Cancel the update when an automatic SafeSpot cannot be saved', 'tbsh-safespot-restore-points' ); ?></label>
+					<label><input type="checkbox" name="abort_update_on_failure" value="1" data-safespot-requires="auto_backup" <?php checked( $safespot_s['abort_update_on_failure'] ); ?> <?php disabled( ! $safespot_s['auto_backup'] ); ?> /> <?php esc_html_e( 'Cancel the update when an automatic SafeSpot cannot be saved', 'tbsh-safespot-restore-points' ); ?></label>
 					<p class="description"><?php esc_html_e( 'Safer, but a full disk could then block security updates. When off, the update continues and the failure is logged.', 'tbsh-safespot-restore-points' ); ?></p>
 				</td>
 			</tr>

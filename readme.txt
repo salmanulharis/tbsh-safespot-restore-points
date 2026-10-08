@@ -4,7 +4,7 @@ Tags: rollback, restore, backup, plugin updates, version control
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -170,10 +170,21 @@ SafeSpot does not send data anywhere. SafeSpots, the activity log (which stores 
 
 == Changelog ==
 
+= 1.0.1 =
+* Fix: The per-item "Auto" switches now show whether an automatic SafeSpot will really be saved. They are shown off and disabled when automatic SafeSpots are turned off in Settings, instead of appearing on.
+* Fix: The dashboard shows the real automatic SafeSpot state (on, off, plugins only or themes only).
+* Improvement: The Plugins and Themes tabs show a notice with a link to Settings when automatic SafeSpots are turned off for that type.
+* Improvement: Settings that depend on automatic SafeSpots are disabled while the main option is off.
+* Improvement: Including an item again warns when automatic SafeSpots are turned off in Settings.
+* Developer: `GET /safespot/v1/items` returns `auto_active`; `POST /safespot/v1/exclusions` returns `auto_enabled`.
+
 = 1.0.0 =
 * Initial release.
 
 == Upgrade Notice ==
+
+= 1.0.1 =
+The Auto switches and dashboard now show the real automatic SafeSpot state. Check Settings if they appear off.
 
 = 1.0.0 =
 Initial release.

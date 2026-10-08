@@ -145,6 +145,18 @@ class SafeSpot_Settings {
 	}
 
 	/**
+	 * Whether automatic SafeSpots are turned on for a type (main setting and the type setting).
+	 *
+	 * Per-item exclusions only apply on top of this.
+	 *
+	 * @param string $type Item type.
+	 * @return bool
+	 */
+	public static function auto_backup_enabled( $type ) {
+		return (bool) self::get( 'auto_backup' ) && (bool) self::get( 'plugin' === $type ? 'auto_backup_plugins' : 'auto_backup_themes' );
+	}
+
+	/**
 	 * Includes or excludes an item from automatic SafeSpots.
 	 *
 	 * @param string $type     Item type.

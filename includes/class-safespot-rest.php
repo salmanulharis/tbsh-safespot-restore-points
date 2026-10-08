@@ -535,6 +535,7 @@ class SafeSpot_REST {
 				'size'          => $row['summary'] ? $row['summary']['size'] : 0,
 				'latest'        => $row['summary'] ? $row['summary']['latest'] : null,
 				'auto_excluded' => SafeSpot_Settings::is_excluded( $item['type'], $item['slug'] ),
+				'auto_active'   => SafeSpot_Settings::auto_backup_enabled( $item['type'] ) && ! SafeSpot_Settings::is_excluded( $item['type'], $item['slug'] ),
 				'updates_held'  => (bool) SafeSpot_Settings::get_hold( $item['type'], $item['slug'] ),
 			);
 		}
@@ -771,17 +772,26 @@ class SafeSpot_REST {
 	 */
 	public function set_exclusion( WP_REST_Request $request ) {
 		SafeSpot_Settings::set_excluded( $request['type'], $request['slug'], (bool) $request['excluded'] );
-		$item = SafeSpot_Items::get( $request['type'], $request['slug'] );
-		$name = $item ? $item['name'] : $request['slug'];
+		$item    = SafeSpot_Items::get( $request['type'], $request['slug'] );
+		$name    = $item ? $item['name'] : $request['slug'];
+		$enabled = SafeSpot_Settings::auto_backup_enabled( $request['type'] );
+
+		if ( $request['excluded'] ) {
+			/* translators: %s: item name. */
+			$message = sprintf( __( 'Automatic SafeSpots turned off for %s.', 'tbsh-safespot-restore-points' ), $name );
+		} elseif ( $enabled ) {
+			/* translators: %s: item name. */
+			$message = sprintf( __( 'Automatic SafeSpots turned on for %s.', 'tbsh-safespot-restore-points' ), $name );
+		} else {
+			/* translators: %s: item name. */
+			$message = sprintf( __( '%s is included again, but automatic SafeSpots are turned off in Settings, so nothing is saved automatically until you turn them on there.', 'tbsh-safespot-restore-points' ), $name );
+		}
 
 		return rest_ensure_response(
 			array(
-				'excluded' => (bool) $request['excluded'],
-				'message'  => $request['excluded']
-					/* translators: %s: item name. */
-					? sprintf( __( 'Automatic SafeSpots turned off for %s.', 'tbsh-safespot-restore-points' ), $name )
-					/* translators: %s: item name. */
-					: sprintf( __( 'Automatic SafeSpots turned on for %s.', 'tbsh-safespot-restore-points' ), $name ),
+				'excluded'     => (bool) $request['excluded'],
+				'auto_enabled' => $enabled,
+				'message'      => $message,
 			)
 		);
 	}
