@@ -139,11 +139,15 @@ class SafeSpot_Backup {
 	 * @return array Formatted SafeSpot with reused = true.
 	 */
 	private function reuse( array $point, array $item, array $args, $log_action ) {
+		// The kept SafeSpot now stands in for a new one: retention must treat it as recent.
+		$update = array( 'reused_at' => current_time( 'mysql', true ) );
+
 		// Keep the note the user typed when the existing SafeSpot has none.
 		if ( '' !== $args['note'] && '' === $point['note'] ) {
-			SafeSpot_Points::update( $point['id'], array( 'note' => substr( $args['note'], 0, 1000 ) ) );
-			$point = SafeSpot_Points::get( $point['id'] );
+			$update['note'] = substr( $args['note'], 0, 1000 );
 		}
+		SafeSpot_Points::update( $point['id'], $update );
+		$point = SafeSpot_Points::get( $point['id'] );
 
 		SafeSpot_Logger::log(
 			$log_action,
@@ -215,7 +219,7 @@ class SafeSpot_Backup {
 			$settings_fingerprint = SafeSpot_Settings_Snapshot::fingerprint( $snapshot );
 		}
 
-		$identical = $this->find_identical( $item, $fingerprint, $settings_fingerprint, $args );
+		$identical = $this->find_identical( $item, $fingerprint, $settings_fingerprint, $exclude, $args );
 		if ( $identical ) {
 			return array(
 				'point'  => $identical,
@@ -342,49 +346,134 @@ class SafeSpot_Backup {
 	}
 
 	/**
-	 * Newest SafeSpot of the item when it holds exactly the content about to be saved.
+	 * Existing SafeSpot of the item that holds exactly the content about to be saved.
 	 *
-	 * Only the newest SafeSpot is compared, so retention ("keep the last N") can never
-	 * remove the copy that stands in for the current version. Its archive (and settings
-	 * file, when settings are requested) must still pass their checksums.
+	 * Every SafeSpot of the same version is a candidate (newest first), not only the
+	 * newest one: restoring back and forth between versions means the current version
+	 * usually matches an older SafeSpot. Candidates whose file count or total size
+	 * differ are skipped without reading anything. SafeSpots saved before fingerprints
+	 * existed get theirs computed from the archive once and stored. The match's archive
+	 * (and settings file, when settings are requested) must still pass their checksums.
+	 *
+	 * Retention keeps a reused SafeSpot as if it had just been saved (see reuse()).
 	 *
 	 * @param array  $item                 Item being saved.
 	 * @param string $fingerprint          Files fingerprint.
 	 * @param string $settings_fingerprint Settings fingerprint ('' = settings not requested).
+	 * @param array  $exclude              Excluded paths the fingerprint was computed with.
 	 * @param array  $args                 Save arguments.
 	 * @return array|null Raw SafeSpot row.
 	 */
-	private function find_identical( array $item, $fingerprint, $settings_fingerprint, array $args ) {
-		$latest = SafeSpot_Points::latest( $item['type'], $item['slug'] );
-
-		if ( ! $latest || '' === $latest['fingerprint'] || ! hash_equals( $latest['fingerprint'], $fingerprint ) || $latest['version'] !== $item['version'] ) {
+	private function find_identical( array $item, $fingerprint, $settings_fingerprint, array $exclude, array $args ) {
+		$stats = SafeSpot_Zip::scan_stats( $item['path'], $exclude );
+		if ( is_wp_error( $stats ) ) {
 			return null;
 		}
 
-		if ( '' !== $settings_fingerprint ) {
-			if ( '' === $latest['settings_file'] || ! hash_equals( (string) $latest['settings_fingerprint'], $settings_fingerprint ) ) {
+		$candidates = SafeSpot_Points::query(
+			array(
+				'type'    => $item['type'],
+				'slug'    => $item['slug'],
+				'version' => $item['version'],
+			)
+		);
+
+		foreach ( $candidates as $candidate ) {
+			if ( SafeSpot_Lock::is_cancelled() ) {
 				return null;
 			}
-			$settings_path = SafeSpot_Storage::path( $latest['settings_file'] );
-			if ( is_wp_error( $settings_path ) || ! is_readable( $settings_path ) || ! hash_equals( (string) $latest['settings_checksum'], (string) hash_file( 'sha256', $settings_path ) ) ) {
-				return null;
+			// Saved by the same code from the same file list, so these must match exactly.
+			if ( $candidate['file_count'] !== $stats['count'] || $candidate['uncompressed_size'] !== $stats['size'] ) {
+				continue;
 			}
+			if ( '' !== $settings_fingerprint && '' === $candidate['settings_file'] ) {
+				continue;
+			}
+
+			$archive_verified = false;
+			if ( '' === $candidate['fingerprint'] ) {
+				if ( ! $this->verify_archive( $candidate ) ) {
+					continue;
+				}
+				$archive_verified = true;
+				$candidate        = $this->backfill_fingerprint( $candidate );
+			}
+			if ( '' === $candidate['fingerprint'] || ! hash_equals( $candidate['fingerprint'], $fingerprint ) ) {
+				continue;
+			}
+
+			if ( '' !== $settings_fingerprint && ! $this->settings_match( $candidate, $settings_fingerprint ) ) {
+				continue;
+			}
+
+			if ( ! $archive_verified && ! $this->verify_archive( $candidate ) ) {
+				continue;
+			}
+
+			/**
+			 * Filters whether an identical existing SafeSpot is kept instead of saving a new one.
+			 *
+			 * @param bool  $reuse     Whether to reuse the existing SafeSpot (default true).
+			 * @param array $candidate Existing SafeSpot record with the same content.
+			 * @param array $item      Item being saved.
+			 * @param array $args      Save arguments (note, source...).
+			 */
+			return apply_filters( 'safespot_reuse_identical', true, $candidate, $item, $args ) ? $candidate : null;
 		}
 
-		$path = SafeSpot_Storage::path( $latest['file_name'] );
-		if ( is_wp_error( $path ) || ! is_readable( $path ) || '' === $latest['checksum'] || ! hash_equals( $latest['checksum'], (string) hash_file( 'sha256', $path ) ) ) {
-			return null;
-		}
+		return null;
+	}
 
-		/**
-		 * Filters whether an identical existing SafeSpot is kept instead of saving a new one.
-		 *
-		 * @param bool  $reuse  Whether to reuse the existing SafeSpot (default true).
-		 * @param array $latest Existing SafeSpot record with the same content.
-		 * @param array $item   Item being saved.
-		 * @param array $args   Save arguments (note, source...).
-		 */
-		return apply_filters( 'safespot_reuse_identical', true, $latest, $item, $args ) ? $latest : null;
+	/**
+	 * Whether a SafeSpot's archive is present and passes its checksum.
+	 *
+	 * @param array $point SafeSpot row.
+	 * @return bool
+	 */
+	private function verify_archive( array $point ) {
+		$path = SafeSpot_Storage::path( $point['file_name'] );
+		return ! is_wp_error( $path ) && is_readable( $path ) && '' !== $point['checksum'] && hash_equals( $point['checksum'], (string) hash_file( 'sha256', $path ) );
+	}
+
+	/**
+	 * Computes and stores the fingerprint of a SafeSpot saved before fingerprints existed.
+	 *
+	 * Call only after verify_archive() passed, so the stored value describes the real
+	 * archive. On failure the row is returned unchanged (and is simply not reused).
+	 *
+	 * @param array $point SafeSpot row with an empty fingerprint.
+	 * @return array Row with its fingerprint filled in when it could be computed.
+	 */
+	private function backfill_fingerprint( array $point ) {
+		$fingerprint = SafeSpot_Zip::archive_fingerprint( SafeSpot_Storage::path( $point['file_name'] ) );
+		if ( is_wp_error( $fingerprint ) ) {
+			return $point;
+		}
+		SafeSpot_Points::update( $point['id'], array( 'fingerprint' => $fingerprint ) );
+		$point['fingerprint'] = $fingerprint;
+		return $point;
+	}
+
+	/**
+	 * Whether a SafeSpot's settings snapshot holds exactly the given settings.
+	 *
+	 * Fills in the settings fingerprint of SafeSpots saved before fingerprints existed.
+	 * SafeSpot_Settings_Snapshot::read() verifies the file's checksum.
+	 *
+	 * @param array  $point                SafeSpot row with a settings file.
+	 * @param string $settings_fingerprint Settings fingerprint to match.
+	 * @return bool
+	 */
+	private function settings_match( array $point, $settings_fingerprint ) {
+		$snapshot = SafeSpot_Settings_Snapshot::read( $point );
+		if ( is_wp_error( $snapshot ) ) {
+			return false;
+		}
+		if ( '' === $point['settings_fingerprint'] ) {
+			$point['settings_fingerprint'] = SafeSpot_Settings_Snapshot::fingerprint( $snapshot );
+			SafeSpot_Points::update( $point['id'], array( 'settings_fingerprint' => $point['settings_fingerprint'] ) );
+		}
+		return hash_equals( $point['settings_fingerprint'], $settings_fingerprint );
 	}
 
 	/**

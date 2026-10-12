@@ -162,6 +162,110 @@ class SafeSpot_Zip {
 	}
 
 	/**
+	 * Number of files and their total size, as they would be archived.
+	 *
+	 * Uses the cached scan of a preceding fingerprint() call when there is one.
+	 *
+	 * @param string $source  Absolute folder or file path.
+	 * @param array  $exclude Relative paths (from the folder root) to skip.
+	 * @return array|WP_Error { count, size }.
+	 */
+	public static function scan_stats( $source, array $exclude = array() ) {
+		$files = self::scan( untrailingslashit( wp_normalize_path( $source ) ), $exclude );
+		if ( is_wp_error( $files ) ) {
+			return $files;
+		}
+		return array(
+			'count' => (int) $files['count'],
+			'size'  => (int) $files['size'],
+		);
+	}
+
+	/**
+	 * Fingerprint of the files inside an existing archive.
+	 *
+	 * Produces exactly what fingerprint() returns for the folder the archive was made
+	 * from (entry names, sizes and contents, in the same order), without extracting
+	 * anything. Used for SafeSpots saved before fingerprints existed. Archives written
+	 * by PclZip have no folder entries, so they never match (they are simply not reused).
+	 *
+	 * @param string $file Zip path.
+	 * @return string|WP_Error
+	 */
+	public static function archive_fingerprint( $file ) {
+		if ( ! class_exists( 'ZipArchive', false ) ) {
+			return new WP_Error( 'safespot_zip_unavailable', __( 'ZipArchive is not available.', 'tbsh-safespot-restore-points' ) );
+		}
+
+		$zip = new ZipArchive();
+		if ( true !== $zip->open( $file, defined( 'ZipArchive::RDONLY' ) ? ZipArchive::RDONLY : 0 ) ) {
+			return new WP_Error( 'safespot_zip_corrupt', __( 'The SafeSpot archive is corrupt and cannot be opened.', 'tbsh-safespot-restore-points' ) );
+		}
+
+		$count = $zip->numFiles; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- ZipArchive API.
+		if ( $count > self::MAX_ENTRIES ) {
+			$zip->close();
+			return new WP_Error( 'safespot_zip_too_large', __( 'The archive contains too many files.', 'tbsh-safespot-restore-points' ) );
+		}
+
+		$entries = array();
+		for ( $i = 0; $i < $count; $i++ ) {
+			$stat = $zip->statIndex( $i );
+			if ( false === $stat ) {
+				$zip->close();
+				return new WP_Error( 'safespot_zip_corrupt', __( 'The SafeSpot archive is corrupt and cannot be read.', 'tbsh-safespot-restore-points' ) );
+			}
+			$entries[] = array(
+				'name' => (string) $stat['name'],
+				'size' => (int) $stat['size'],
+			);
+		}
+		usort(
+			$entries,
+			static function ( $a, $b ) {
+				return strcmp( $a['name'], $b['name'] );
+			}
+		);
+
+		$context = hash_init( 'sha256' );
+		foreach ( $entries as $entry ) {
+			hash_update( $context, $entry['name'] . "\0" );
+			if ( '/' === substr( $entry['name'], -1 ) ) {
+				continue;
+			}
+			hash_update( $context, (string) $entry['size'] . "\0" );
+
+			$stream = $zip->getStream( $entry['name'] );
+			if ( ! $stream ) {
+				$zip->close();
+				return new WP_Error( 'safespot_zip_corrupt', __( 'The SafeSpot archive is corrupt and cannot be read.', 'tbsh-safespot-restore-points' ) );
+			}
+			$read = 0;
+			while ( ! feof( $stream ) ) {
+				$chunk = fread( $stream, 1048576 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fread -- Reading a zip entry stream.
+				if ( false === $chunk ) {
+					break;
+				}
+				$read += strlen( $chunk );
+				hash_update( $context, $chunk );
+			}
+			fclose( $stream ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Zip entry stream.
+
+			if ( $read !== $entry['size'] ) {
+				$zip->close();
+				return new WP_Error( 'safespot_zip_corrupt', __( 'The SafeSpot archive is corrupt and cannot be read.', 'tbsh-safespot-restore-points' ) );
+			}
+			if ( SafeSpot_Lock::checkpoint() ) {
+				$zip->close();
+				return SafeSpot_Lock::cancelled_error();
+			}
+		}
+
+		$zip->close();
+		return hash_final( $context );
+	}
+
+	/**
 	 * Builds the list of entries to archive.
 	 *
 	 * @param string $source  Normalized source path.

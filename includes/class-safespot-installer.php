@@ -108,6 +108,7 @@ class SafeSpot_Installer {
   parent_theme varchar(191) NOT NULL DEFAULT '',
   created_by bigint(20) unsigned NOT NULL DEFAULT 0,
   created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+  reused_at datetime NULL DEFAULT NULL,
   PRIMARY KEY  (id),
   KEY item (item_type,slug(180)),
   KEY created_at (created_at)

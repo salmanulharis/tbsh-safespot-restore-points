@@ -132,14 +132,17 @@ class SafeSpot_Points {
 	 * Updates columns.
 	 *
 	 * @param int   $id   ID.
-	 * @param array $data Columns (note, is_locked).
+	 * @param array $data Columns (note, is_locked, fingerprint, settings_fingerprint, reused_at).
 	 * @return bool
 	 */
 	public static function update( $id, array $data ) {
 		global $wpdb;
 		$allowed = array(
-			'note'      => '%s',
-			'is_locked' => '%d',
+			'note'                 => '%s',
+			'is_locked'            => '%d',
+			'fingerprint'          => '%s',
+			'settings_fingerprint' => '%s',
+			'reused_at'            => '%s',
 		);
 		$row     = array_intersect_key( $data, $allowed );
 		if ( empty( $row ) ) {
@@ -166,7 +169,7 @@ class SafeSpot_Points {
 	/**
 	 * Lists SafeSpots.
 	 *
-	 * @param array $args { type, slug, source, locked, limit, offset, order }.
+	 * @param array $args { type, slug, version, source, limit, offset, order }.
 	 * @return array[]
 	 */
 	public static function query( array $args = array() ) {
@@ -175,12 +178,13 @@ class SafeSpot_Points {
 		$args = wp_parse_args(
 			$args,
 			array(
-				'type'   => '',
-				'slug'   => '',
-				'source' => '',
-				'limit'  => 0,
-				'offset' => 0,
-				'order'  => 'DESC',
+				'type'    => '',
+				'slug'    => '',
+				'version' => null,
+				'source'  => '',
+				'limit'   => 0,
+				'offset'  => 0,
+				'order'   => 'DESC',
 			)
 		);
 
@@ -195,6 +199,10 @@ class SafeSpot_Points {
 		if ( '' !== $args['slug'] ) {
 			$where[]  = 'slug = %s';
 			$params[] = $args['slug'];
+		}
+		if ( null !== $args['version'] ) {
+			$where[]  = 'version = %s';
+			$params[] = (string) $args['version'];
 		}
 		if ( in_array( $args['source'], self::SOURCES, true ) ) {
 			$where[]  = 'source = %s';
@@ -280,6 +288,18 @@ class SafeSpot_Points {
 			)
 		);
 
+		/*
+		 * Rank by when each SafeSpot was last saved or confirmed. A SafeSpot reused for an
+		 * identical save (see SafeSpot_Backup) stands in for a brand-new one, so retention
+		 * must treat it as recent instead of deleting it as the oldest.
+		 */
+		usort(
+			$points,
+			static function ( $a, $b ) {
+				return ( $b['retained_ts'] <=> $a['retained_ts'] ) ?: ( $b['id'] <=> $a['id'] );
+			}
+		);
+
 		$cutoff   = $max_age > 0 ? time() - ( $max_age * DAY_IN_SECONDS ) : 0;
 		$unlocked = 0;
 		$remove   = array();
@@ -290,7 +310,7 @@ class SafeSpot_Points {
 			}
 			++$unlocked;
 			$too_many = $keep > 0 && $unlocked > $keep;
-			$too_old  = $cutoff > 0 && $point['created_ts'] < $cutoff;
+			$too_old  = $cutoff > 0 && $point['retained_ts'] < $cutoff;
 			if ( $too_many || $too_old ) {
 				$remove[] = $point;
 			}
@@ -319,9 +339,13 @@ class SafeSpot_Points {
 		foreach ( array( 'id', 'file_size', 'uncompressed_size', 'file_count', 'settings_count', 'created_by' ) as $key ) {
 			$row[ $key ] = isset( $row[ $key ] ) ? (int) $row[ $key ] : 0;
 		}
-		$row['is_locked']  = ! empty( $row['is_locked'] );
-		$row['created_ts'] = (int) strtotime( $row['created_at'] . ' UTC' );
-		$row['note']       = (string) $row['note'];
+		$row['is_locked']            = ! empty( $row['is_locked'] );
+		$row['created_ts']           = (int) strtotime( $row['created_at'] . ' UTC' );
+		$row['reused_ts']            = empty( $row['reused_at'] ) ? 0 : (int) strtotime( $row['reused_at'] . ' UTC' );
+		$row['retained_ts']          = max( $row['created_ts'], $row['reused_ts'] );
+		$row['note']                 = (string) $row['note'];
+		$row['fingerprint']          = (string) ( $row['fingerprint'] ?? '' );
+		$row['settings_fingerprint'] = (string) ( $row['settings_fingerprint'] ?? '' );
 		return $row;
 	}
 

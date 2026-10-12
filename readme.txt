@@ -4,7 +4,7 @@ Tags: rollback, restore, backup, plugin updates, version control
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.2
+Stable tag: 1.0.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -183,6 +183,11 @@ SafeSpot does not send data anywhere. SafeSpots, the activity log (which stores 
 
 == Changelog ==
 
+= 1.0.3 =
+* Fix: Restoring a plugin or theme back and forth between versions saved a new "Auto – before restore" SafeSpot every time, even when an identical SafeSpot of that version already existed. Every SafeSpot of the same version is now checked, not only the newest one.
+* Fix: SafeSpots saved before 1.0.2 were never recognised as identical, so the first restore or update after upgrading always saved a duplicate. Their contents are now checked once, from the archive itself.
+* Improvement: A SafeSpot that is kept instead of saving a duplicate counts as freshly saved for the "keep the last N SafeSpots" and "delete after X days" rules, so it is not cleaned up before newer copies would have been. Its saved date in the history does not change.
+
 = 1.0.2 =
 * New: Select SafeSpots in the history (individually, all of an item, or a range with Shift-click) and lock, unlock or delete them in one go. Bulk delete keeps locked SafeSpots unless you include them.
 * Fix: Duplicate SafeSpots. Saving, updating, retrying a failed update, deleting or bulk-saving an item that has not changed since its newest SafeSpot now keeps that SafeSpot instead of saving an identical copy. Changes are detected from the file contents (and settings, when included), not from timestamps.
@@ -210,6 +215,9 @@ SafeSpot does not send data anywhere. SafeSpots, the activity log (which stores 
 * Initial release.
 
 == Upgrade Notice ==
+
+= 1.0.3 =
+Stops duplicate "Auto – before restore" SafeSpots when restoring back and forth between versions, including SafeSpots saved before 1.0.2.
 
 = 1.0.2 =
 Prevents duplicate SafeSpots, fixes a bulk-save race and adds bulk lock, unlock and delete for SafeSpots.
