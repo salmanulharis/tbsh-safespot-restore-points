@@ -4,7 +4,7 @@ Tags: rollback, restore, backup, plugin updates, version control
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.1.0
+Stable tag: 1.0.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -183,7 +183,7 @@ SafeSpot does not send data anywhere. SafeSpots, the activity log (which stores 
 
 == Changelog ==
 
-= 1.1.0 =
+= 1.0.2 =
 * New: Select SafeSpots in the history (individually, all of an item, or a range with Shift-click) and lock, unlock or delete them in one go. Bulk delete keeps locked SafeSpots unless you include them.
 * Fix: Duplicate SafeSpots. Saving, updating, retrying a failed update, deleting or bulk-saving an item that has not changed since its newest SafeSpot now keeps that SafeSpot instead of saving an identical copy. Changes are detected from the file contents (and settings, when included), not from timestamps.
 * Fix: "Save SafeSpots for selected" could save an item twice and skip the next one when the background queue and the open admin screen processed the queue at the same time.
@@ -211,7 +211,7 @@ SafeSpot does not send data anywhere. SafeSpots, the activity log (which stores 
 
 == Upgrade Notice ==
 
-= 1.1.0 =
+= 1.0.2 =
 Prevents duplicate SafeSpots, fixes a bulk-save race and adds bulk lock, unlock and delete for SafeSpots.
 
 = 1.0.1 =
