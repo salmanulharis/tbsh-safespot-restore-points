@@ -24,6 +24,7 @@ $safespot_hold      = SafeSpot_Settings::get_hold( $safespot_type, $safespot_slu
 $safespot_can_save  = $safespot_installed && SafeSpot_Permissions::can( 'save', $safespot_type );
 $safespot_can_rest  = SafeSpot_Permissions::can( 'restore', $safespot_type );
 $safespot_can_del   = SafeSpot_Permissions::can( 'delete', $safespot_type );
+$safespot_can_pick  = $safespot_can_del || SafeSpot_Permissions::can( 'save', $safespot_type );
 $safespot_search    = strtolower( $item['name'] . ' ' . $safespot_slug . ' ' . $item['author'] );
 $safespot_prefixes  = implode( ', ', SafeSpot_Settings::get_prefixes( $safespot_type, $safespot_slug ) );
 
@@ -155,6 +156,15 @@ $safespot_status_class = array(
 						</caption>
 						<thead>
 							<tr>
+								<?php if ( $safespot_can_pick ) : ?>
+									<td class="check-column">
+										<input
+											type="checkbox"
+											class="safespot-point-select-all"
+											aria-label="<?php echo esc_attr( sprintf( /* translators: %s: plugin or theme name. */ __( 'Select all SafeSpots of %s', 'tbsh-safespot-restore-points' ), $item['name'] ) ); ?>"
+										/>
+									</td>
+								<?php endif; ?>
 								<th scope="col"><?php esc_html_e( 'Version', 'tbsh-safespot-restore-points' ); ?></th>
 								<th scope="col"><?php esc_html_e( 'Saved', 'tbsh-safespot-restore-points' ); ?></th>
 								<th scope="col"><?php esc_html_e( 'Size', 'tbsh-safespot-restore-points' ); ?></th>
@@ -176,6 +186,16 @@ $safespot_status_class = array(
 									data-locked="<?php echo $safespot_f['locked'] ? '1' : '0'; ?>"
 									data-settings="<?php echo $safespot_f['has_settings'] ? '1' : '0'; ?>"
 								>
+									<?php if ( $safespot_can_pick ) : ?>
+										<th scope="row" class="check-column">
+											<input
+												type="checkbox"
+												class="safespot-point-select"
+												value="<?php echo esc_attr( (string) $safespot_f['id'] ); ?>"
+												aria-label="<?php echo esc_attr( sprintf( /* translators: 1: plugin or theme name, 2: version, 3: date. */ __( 'Select SafeSpot of %1$s %2$s from %3$s', 'tbsh-safespot-restore-points' ), $item['name'], $safespot_f['version'], $safespot_f['created_human'] ) ); ?>"
+											/>
+										</th>
+									<?php endif; ?>
 									<td data-colname="<?php esc_attr_e( 'Version', 'tbsh-safespot-restore-points' ); ?>">
 										<strong><?php echo esc_html( '' !== $safespot_f['version'] ? $safespot_f['version'] : '—' ); ?></strong>
 										<?php if ( '' !== $item['version'] && $safespot_f['version'] === $item['version'] ) : ?>

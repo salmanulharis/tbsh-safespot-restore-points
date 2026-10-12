@@ -46,19 +46,37 @@ class SafeSpot_Queue {
 	 * @return array
 	 */
 	public function get() {
+		$this->flush_cache();
 		$state = get_site_option( self::OPTION, array() );
 		return wp_parse_args(
 			is_array( $state ) ? $state : array(),
 			array(
-				'pending' => array(),
-				'total'   => 0,
-				'done'    => 0,
-				'failed'  => array(),
-				'note'    => '',
-				'started' => 0,
-				'user'    => 0,
+				'pending'   => array(),
+				'total'     => 0,
+				'done'      => 0,
+				'unchanged' => 0,
+				'failed'    => array(),
+				'note'      => '',
+				'started'   => 0,
+				'user'      => 0,
 			)
 		);
+	}
+
+	/**
+	 * Drops this request's cached copy of the queue option.
+	 *
+	 * Another request (cron, a second browser tab) may have advanced the queue while
+	 * this one was busy archiving, so state is always read from the database.
+	 */
+	private function flush_cache() {
+		if ( is_multisite() ) {
+			wp_cache_delete( get_current_network_id() . ':' . self::OPTION, 'site-options' );
+			wp_cache_delete( get_current_network_id() . ':notoptions', 'site-options' );
+			return;
+		}
+		wp_cache_delete( self::OPTION, 'options' );
+		wp_cache_delete( 'notoptions', 'options' );
 	}
 
 	/**
@@ -81,13 +99,14 @@ class SafeSpot_Queue {
 		$state = $this->get();
 		if ( empty( $state['pending'] ) ) {
 			$state = array(
-				'pending' => array(),
-				'total'   => 0,
-				'done'    => 0,
-				'failed'  => array(),
-				'note'    => sanitize_textarea_field( $note ),
-				'started' => time(),
-				'user'    => get_current_user_id(),
+				'pending'   => array(),
+				'total'     => 0,
+				'done'      => 0,
+				'unchanged' => 0,
+				'failed'    => array(),
+				'note'      => sanitize_textarea_field( $note ),
+				'started'   => time(),
+				'user'      => get_current_user_id(),
 			);
 		}
 
@@ -152,39 +171,53 @@ class SafeSpot_Queue {
 		$start = microtime( true );
 
 		do {
-			$state = $this->get();
-			if ( empty( $state['pending'] ) ) {
+			/*
+			 * Claim the next item under the operation lock, so a cron run and the admin
+			 * screen driving the queue never save the same item twice or skip one.
+			 */
+			if ( ! SafeSpot_Lock::acquire( 'queue', 5 ) ) {
 				break;
 			}
 
-			$next = $state['pending'][0];
-			$this->current_user_fallback( $state );
+			try {
+				$state = $this->get();
+				if ( empty( $state['pending'] ) ) {
+					break;
+				}
 
-			$result = $this->backup->save(
-				$next['type'],
-				$next['slug'],
-				array(
-					'note'      => $state['note'],
-					'source'    => 'bulk',
-					'lock_wait' => 5,
-				)
-			);
+				$next = $state['pending'][0];
+				$this->current_user_fallback( $state );
 
-			if ( is_wp_error( $result ) && 'safespot_locked' === $result->get_error_code() ) {
-				break;
-			}
-
-			$state = $this->get();
-			array_shift( $state['pending'] );
-			++$state['done'];
-			if ( is_wp_error( $result ) ) {
-				$state['failed'][] = array(
-					'type'    => $next['type'],
-					'slug'    => $next['slug'],
-					'message' => $result->get_error_message(),
+				$result = $this->backup->save(
+					$next['type'],
+					$next['slug'],
+					array(
+						'note'   => $state['note'],
+						'source' => 'bulk',
+					)
 				);
+
+				$state = $this->get();
+				// The queue may have been cancelled (or restarted) meanwhile.
+				if ( empty( $state['pending'] ) || $state['pending'][0] !== $next ) {
+					continue;
+				}
+
+				array_shift( $state['pending'] );
+				++$state['done'];
+				if ( is_wp_error( $result ) ) {
+					$state['failed'][] = array(
+						'type'    => $next['type'],
+						'slug'    => $next['slug'],
+						'message' => $result->get_error_message(),
+					);
+				} elseif ( ! empty( $result['reused'] ) ) {
+					++$state['unchanged'];
+				}
+				$this->put( $state );
+			} finally {
+				SafeSpot_Lock::release();
 			}
-			$this->put( $state );
 		} while ( ( microtime( true ) - $start ) < $budget );
 
 		return $this->status();
@@ -209,12 +242,13 @@ class SafeSpot_Queue {
 	public function status() {
 		$state = $this->get();
 		return array(
-			'total'    => (int) $state['total'],
-			'done'     => (int) $state['done'],
-			'pending'  => count( $state['pending'] ),
-			'failed'   => $state['failed'],
-			'running'  => ! empty( $state['pending'] ),
-			'progress' => $state['total'] > 0 ? (int) floor( $state['done'] / $state['total'] * 100 ) : 100,
+			'total'     => (int) $state['total'],
+			'done'      => (int) $state['done'],
+			'unchanged' => (int) $state['unchanged'],
+			'pending'   => count( $state['pending'] ),
+			'failed'    => $state['failed'],
+			'running'   => ! empty( $state['pending'] ),
+			'progress'  => $state['total'] > 0 ? (int) floor( $state['done'] / $state['total'] * 100 ) : 100,
 		);
 	}
 

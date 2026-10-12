@@ -27,15 +27,24 @@ class SafeSpot_CLI {
 	private $restore;
 
 	/**
+	 * Running jobs.
+	 *
+	 * @var SafeSpot_Jobs
+	 */
+	private $jobs;
+
+	/**
 	 * Registers the "safespot" command.
 	 *
 	 * @param SafeSpot_Backup  $backup  Backup service.
 	 * @param SafeSpot_Restore $restore Restore service.
+	 * @param SafeSpot_Jobs    $jobs    Running jobs.
 	 */
-	public static function register( SafeSpot_Backup $backup, SafeSpot_Restore $restore ) {
+	public static function register( SafeSpot_Backup $backup, SafeSpot_Restore $restore, SafeSpot_Jobs $jobs ) {
 		$instance          = new self();
 		$instance->backup  = $backup;
 		$instance->restore = $restore;
+		$instance->jobs    = $jobs;
 		WP_CLI::add_command( 'safespot', $instance );
 	}
 
@@ -92,6 +101,11 @@ class SafeSpot_CLI {
 
 		if ( WP_CLI\Utils\get_flag_value( $assoc_args, 'porcelain', false ) ) {
 			WP_CLI::line( (string) $point['id'] );
+			return;
+		}
+
+		if ( $point['reused'] ) {
+			WP_CLI::success( sprintf( 'No changes since SafeSpot #%d (%s %s, %s). Kept it instead of saving a duplicate.', $point['id'], $point['name'], $point['version'], $point['created_human'] ) );
 			return;
 		}
 
@@ -312,6 +326,95 @@ class SafeSpot_CLI {
 			WP_CLI::error( sprintf( '%d SafeSpot(s) could not be deleted.', $errors ) );
 		}
 		WP_CLI::success( 'Done.' );
+	}
+
+	/**
+	 * Shows the SafeSpot operation that is running, if any.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--format=<format>]
+	 * : Output format.
+	 * ---
+	 * default: text
+	 * options:
+	 *   - text
+	 *   - json
+	 * ---
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp safespot status
+	 *
+	 * @param array $args       Positional arguments.
+	 * @param array $assoc_args Associative arguments.
+	 */
+	public function status( $args, $assoc_args ) {
+		unset( $args );
+		$status = $this->jobs->status();
+
+		if ( 'json' === ( $assoc_args['format'] ?? 'text' ) ) {
+			WP_CLI::line( (string) wp_json_encode( $status ) );
+			return;
+		}
+		if ( ! $status['running'] ) {
+			WP_CLI::success( 'Nothing is running.' );
+			return;
+		}
+		if ( $status['lock'] ) {
+			WP_CLI::line( 'Running: ' . $status['lock']['summary'] );
+			WP_CLI::line( 'Cancellable: ' . ( $status['lock']['cancellable'] ? 'yes' : 'no, files are being replaced' ) );
+			if ( $status['lock']['cancel_requested'] ) {
+				WP_CLI::line( 'A cancel request is pending.' );
+			}
+		}
+		if ( $status['queue']['running'] ) {
+			WP_CLI::line( sprintf( 'Bulk queue: %d of %d done, %d pending.', $status['queue']['done'], $status['queue']['total'], $status['queue']['pending'] ) );
+		}
+	}
+
+	/**
+	 * Cancels the running SafeSpot operation (and the bulk queue it belongs to).
+	 *
+	 * Backups are stopped at their next checkpoint and leave nothing behind. A restore
+	 * can only be cancelled before it starts replacing files.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--force]
+	 * : Remove the lock of an operation whose process stopped responding.
+	 *
+	 * [--wait=<seconds>]
+	 * : Seconds to wait for the operation to stop.
+	 * ---
+	 * default: 15
+	 * ---
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp safespot cancel
+	 *     wp safespot cancel --force
+	 *
+	 * @param array $args       Positional arguments.
+	 * @param array $assoc_args Associative arguments.
+	 */
+	public function cancel( $args, $assoc_args ) {
+		unset( $args );
+		$force  = (bool) WP_CLI\Utils\get_flag_value( $assoc_args, 'force', false );
+		$result = $this->jobs->cancel( $force, absint( $assoc_args['wait'] ?? 15 ), false );
+
+		if ( is_wp_error( $result ) ) {
+			if ( 'safespot_nothing_running' === $result->get_error_code() ) {
+				WP_CLI::success( $result->get_error_message() );
+				return;
+			}
+			WP_CLI::error( $result->get_error_message() );
+		}
+		if ( 'requested' === $result['status'] ) {
+			WP_CLI::warning( $result['message'] );
+			return;
+		}
+		WP_CLI::success( $result['message'] );
 	}
 
 	/**

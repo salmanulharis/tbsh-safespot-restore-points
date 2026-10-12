@@ -38,16 +38,25 @@ class SafeSpot_REST {
 	private $queue;
 
 	/**
+	 * Running jobs.
+	 *
+	 * @var SafeSpot_Jobs
+	 */
+	private $jobs;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param SafeSpot_Backup  $backup  Backup service.
 	 * @param SafeSpot_Restore $restore Restore service.
 	 * @param SafeSpot_Queue   $queue   Queue.
+	 * @param SafeSpot_Jobs    $jobs    Running jobs.
 	 */
-	public function __construct( SafeSpot_Backup $backup, SafeSpot_Restore $restore, SafeSpot_Queue $queue ) {
+	public function __construct( SafeSpot_Backup $backup, SafeSpot_Restore $restore, SafeSpot_Queue $queue, SafeSpot_Jobs $jobs ) {
 		$this->backup  = $backup;
 		$this->restore = $restore;
 		$this->queue   = $queue;
+		$this->jobs    = $jobs;
 	}
 
 	/**
@@ -193,6 +202,37 @@ class SafeSpot_REST {
 					'callback'            => array( $this, 'delete_point' ),
 					'permission_callback' => $this->point_permission( 'delete' ),
 					'args'                => $id_arg,
+				),
+			)
+		);
+
+		register_rest_route(
+			self::NS,
+			'/points/bulk',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'bulk_points' ),
+				'permission_callback' => array( $this, 'can_view_any' ),
+				'args'                => array(
+					'ids'            => array(
+						'type'     => 'array',
+						'required' => true,
+						'minItems' => 1,
+						'maxItems' => 500,
+						'items'    => array(
+							'type'    => 'integer',
+							'minimum' => 1,
+						),
+					),
+					'action'         => array(
+						'type'     => 'string',
+						'enum'     => array( 'lock', 'unlock', 'delete' ),
+						'required' => true,
+					),
+					'include_locked' => array(
+						'type'    => 'boolean',
+						'default' => false,
+					),
 				),
 			)
 		);
@@ -398,6 +438,32 @@ class SafeSpot_REST {
 
 		register_rest_route(
 			self::NS,
+			'/jobs',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( $this, 'jobs_status' ),
+				'permission_callback' => array( $this, 'can_view_any' ),
+			)
+		);
+
+		register_rest_route(
+			self::NS,
+			'/jobs/cancel',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'jobs_cancel' ),
+				'permission_callback' => array( $this, 'can_save_any' ),
+				'args'                => array(
+					'force' => array(
+						'type'    => 'boolean',
+						'default' => false,
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::NS,
 			'/queue/run',
 			array(
 				'methods'             => WP_REST_Server::CREATABLE,
@@ -592,18 +658,29 @@ class SafeSpot_REST {
 			return $point;
 		}
 
-		$message = sprintf(
-			/* translators: 1: item name, 2: version, 3: size. */
-			__( 'SafeSpot saved: %1$s %2$s (%3$s).', 'tbsh-safespot-restore-points' ),
-			$point['name'],
-			$point['version'],
-			$point['size_human']
-		);
+		if ( $point['reused'] ) {
+			$message = sprintf(
+				/* translators: 1: item name, 2: version, 3: date. */
+				__( '%1$s %2$s has not changed since its SafeSpot from %3$s, so that SafeSpot was kept instead of saving a duplicate.', 'tbsh-safespot-restore-points' ),
+				$point['name'],
+				$point['version'],
+				$point['created_human']
+			);
+		} else {
+			$message = sprintf(
+				/* translators: 1: item name, 2: version, 3: size. */
+				__( 'SafeSpot saved: %1$s %2$s (%3$s).', 'tbsh-safespot-restore-points' ),
+				$point['name'],
+				$point['version'],
+				$point['size_human']
+			);
+		}
 
 		return rest_ensure_response(
 			$this->with_row(
 				array(
 					'point'   => $point,
+					'reused'  => $point['reused'],
 					'message' => $message,
 				),
 				$type,
@@ -706,6 +783,142 @@ class SafeSpot_REST {
 				$point['slug']
 			)
 		);
+	}
+
+	/**
+	 * POST /points/bulk – lock, unlock or delete several SafeSpots.
+	 *
+	 * Permissions are checked per SafeSpot (save for lock/unlock, delete for delete).
+	 * Locked SafeSpots are only deleted when include_locked is true.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response
+	 */
+	public function bulk_points( WP_REST_Request $request ) {
+		$action = $request['action'];
+		$ids    = array_values( array_unique( array_map( 'absint', (array) $request['ids'] ) ) );
+		$points = SafeSpot_Points::get_many( $ids );
+		$done   = array();
+		$failed = array();
+		$items  = array();
+		$skip   = array(
+			'missing'    => array_values( array_diff( $ids, array_keys( $points ) ) ),
+			'locked'     => array(),
+			'permission' => array(),
+		);
+
+		foreach ( $ids as $id ) {
+			if ( ! isset( $points[ $id ] ) ) {
+				continue;
+			}
+			$point = $points[ $id ];
+
+			if ( ! SafeSpot_Permissions::can( 'delete' === $action ? 'delete' : 'save', $point['item_type'] ) ) {
+				$skip['permission'][] = $id;
+				continue;
+			}
+
+			$items[ $point['item_type'] . ':' . $point['slug'] ] = array( $point['item_type'], $point['slug'] );
+
+			if ( 'delete' === $action ) {
+				if ( $point['is_locked'] && ! $request['include_locked'] ) {
+					$skip['locked'][] = $id;
+					continue;
+				}
+				$result = $this->backup->delete( $id );
+				if ( is_wp_error( $result ) ) {
+					$failed[] = array(
+						'id'      => $id,
+						'message' => $result->get_error_message(),
+					);
+					continue;
+				}
+				$done[] = $id;
+				continue;
+			}
+
+			$lock = 'lock' === $action;
+			if ( $point['is_locked'] !== $lock ) {
+				SafeSpot_Points::update( $id, array( 'is_locked' => $lock ? 1 : 0 ) );
+				SafeSpot_Logger::log(
+					'edit',
+					'info',
+					sprintf(
+						/* translators: 1: item name, 2: version. */
+						$lock ? __( 'Locked SafeSpot of %1$s %2$s (bulk action).', 'tbsh-safespot-restore-points' ) : __( 'Unlocked SafeSpot of %1$s %2$s (bulk action).', 'tbsh-safespot-restore-points' ),
+						$point['name'],
+						$point['version']
+					),
+					array(
+						'type'     => $point['item_type'],
+						'slug'     => $point['slug'],
+						'name'     => $point['name'],
+						'point_id' => $id,
+					)
+				);
+			}
+			$done[] = $id;
+		}
+
+		$rows = array();
+		foreach ( $items as $item ) {
+			$rows[] = $this->with_row( array(), $item[0], $item[1] );
+		}
+
+		return rest_ensure_response(
+			array(
+				'action'  => $action,
+				'done'    => $done,
+				'skipped' => $skip,
+				'failed'  => $failed,
+				'rows'    => $rows,
+				'message' => $this->bulk_message( $action, count( $done ), $skip, count( $failed ) ),
+			)
+		);
+	}
+
+	/**
+	 * Summary sentence for a bulk action.
+	 *
+	 * @param string $action  lock|unlock|delete.
+	 * @param int    $done    Number processed.
+	 * @param array  $skip    Skipped IDs by reason.
+	 * @param int    $failed  Number failed.
+	 * @return string
+	 */
+	private function bulk_message( $action, $done, array $skip, $failed ) {
+		if ( 'delete' === $action ) {
+			/* translators: %d: number of SafeSpots. */
+			$parts = array( sprintf( _n( '%d SafeSpot deleted.', '%d SafeSpots deleted.', $done, 'tbsh-safespot-restore-points' ), $done ) );
+		} elseif ( 'lock' === $action ) {
+			/* translators: %d: number of SafeSpots. */
+			$parts = array( sprintf( _n( '%d SafeSpot locked. Locked SafeSpots are never deleted automatically.', '%d SafeSpots locked. Locked SafeSpots are never deleted automatically.', $done, 'tbsh-safespot-restore-points' ), $done ) );
+		} else {
+			/* translators: %d: number of SafeSpots. */
+			$parts = array( sprintf( _n( '%d SafeSpot unlocked.', '%d SafeSpots unlocked.', $done, 'tbsh-safespot-restore-points' ), $done ) );
+		}
+
+		if ( $skip['locked'] ) {
+			$count = count( $skip['locked'] );
+			/* translators: %d: number of SafeSpots. */
+			$parts[] = sprintf( _n( '%d locked SafeSpot was kept.', '%d locked SafeSpots were kept.', $count, 'tbsh-safespot-restore-points' ), $count );
+		}
+		if ( $skip['permission'] ) {
+			$count = count( $skip['permission'] );
+			/* translators: %d: number of SafeSpots. */
+			$parts[] = sprintf( _n( '%d SafeSpot was skipped because you are not allowed to change it.', '%d SafeSpots were skipped because you are not allowed to change them.', $count, 'tbsh-safespot-restore-points' ), $count );
+		}
+		if ( $skip['missing'] ) {
+			$count = count( $skip['missing'] );
+			/* translators: %d: number of SafeSpots. */
+			$parts[] = sprintf( _n( '%d SafeSpot no longer exists.', '%d SafeSpots no longer exist.', $count, 'tbsh-safespot-restore-points' ), $count );
+		}
+		if ( $failed ) {
+			/* translators: %d: number of SafeSpots. */
+			$parts[] = sprintf( _n( '%d SafeSpot could not be deleted. See the Activity Log.', '%d SafeSpots could not be deleted. See the Activity Log.', $failed, 'tbsh-safespot-restore-points' ), $failed );
+		}
+
+		return implode( ' ', $parts );
 	}
 
 	/**
@@ -945,6 +1158,30 @@ class SafeSpot_REST {
 	 */
 	public function queue_run() {
 		return rest_ensure_response( $this->queue->process( 15 ) );
+	}
+
+	/**
+	 * GET /jobs – what is running.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public function jobs_status() {
+		return rest_ensure_response( $this->jobs->status() );
+	}
+
+	/**
+	 * POST /jobs/cancel – stop the running job.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function jobs_cancel( WP_REST_Request $request ) {
+		$result = $this->jobs->cancel( (bool) $request['force'] );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+		$result['jobs'] = $this->jobs->status();
+		return rest_ensure_response( $result );
 	}
 
 	/**

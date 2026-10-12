@@ -124,6 +124,7 @@
 		const progress = $( '.safespot-modal__progress', dialog );
 		const progressText = $( '.safespot-modal__progress-text', dialog );
 		const progressBar = $( '.safespot-progress', dialog );
+		const stopButton = $( '.safespot-modal__stop', dialog );
 
 		let handler = null;
 		let busy = false;
@@ -140,6 +141,22 @@
 			} );
 			body.setAttribute( 'aria-busy', on ? 'true' : 'false' );
 			dialog.classList.toggle( 'is-busy', on );
+			if ( ! on && stopButton ) {
+				stopButton.hidden = true;
+				stopButton.disabled = false;
+			}
+		}
+
+		/**
+		 * Shows a "Stop" button while busy, for operations that can be cancelled.
+		 *
+		 * @param {boolean} on Whether to show it.
+		 */
+		function setStoppable( on ) {
+			if ( stopButton ) {
+				stopButton.hidden = ! on;
+				stopButton.disabled = false;
+			}
 		}
 
 		function setConfirm( label, disabled = false, destructive = false ) {
@@ -222,6 +239,7 @@
 			open,
 			close,
 			setBusy,
+			setStoppable,
 			setConfirm,
 			setError,
 			body,
@@ -231,6 +249,181 @@
 			isBusy: () => busy,
 		};
 	} )();
+
+	/* ------------------------------------------------------------------ *
+	 * Running job banner (what holds the SafeSpot lock) and cancelling it
+	 * ------------------------------------------------------------------ */
+
+	const Jobs = ( function () {
+		const el = $( '#safespot-job' );
+		let timer = null;
+
+		function describe( status ) {
+			const lock = status.lock;
+			if ( ! lock ) {
+				const queue = status.queue || {};
+				return {
+					/* translators: 1: done count, 2: total count. */
+					title: sprintf( __( 'Saving SafeSpots in bulk (%1$d of %2$d done)', 'tbsh-safespot-restore-points' ), queue.done || 0, queue.total || 0 ),
+					meta: '',
+				};
+			}
+			let meta = lock.phase || '';
+			if ( lock.progress && 'compressing' === lock.progress_phase ) {
+				meta += ' ' + lock.progress.percent + '%';
+			} else if ( lock.progress ) {
+				/* translators: 1: done, 2: total. */
+				meta += ' ' + sprintf( __( '(%1$s of %2$s)', 'tbsh-safespot-restore-points' ), lock.progress.done.toLocaleString(), lock.progress.total.toLocaleString() );
+			}
+			/* translators: 1: time span, e.g. "3 mins", 2: user name. */
+			meta += ( meta ? ' · ' : '' ) + sprintf( __( 'started %1$s ago by %2$s', 'tbsh-safespot-restore-points' ), lock.started_human, lock.user_name );
+			return { title: lock.label + ( lock.job ? ' (' + lock.job + ')' : '' ), meta };
+		}
+
+		function render( status ) {
+			if ( ! el ) {
+				return;
+			}
+			if ( ! status || ! status.running ) {
+				el.hidden = true;
+				el.innerHTML = '';
+				stop();
+				return;
+			}
+
+			const lock = status.lock;
+			const text = describe( status );
+			let html = '<span class="spinner is-active" aria-hidden="true"></span><div class="safespot-job__text"><strong>' + esc( text.title ) + '</strong><span class="safespot-job__meta">' + esc( text.meta ) + '</span>';
+
+			if ( lock && lock.progress ) {
+				html += '<span class="safespot-progress safespot-progress--determinate" aria-hidden="true"><span class="safespot-progress__bar" style="width:' + esc( lock.progress.percent ) + '%"></span></span>';
+			}
+			if ( lock && ! lock.responsive ) {
+				html += '<span class="safespot-job__warning">' + esc( __( 'This operation has stopped responding. Its process has probably ended, so you can release it.', 'tbsh-safespot-restore-points' ) ) + '</span>';
+			} else if ( lock && lock.cancel_requested ) {
+				html += '<span class="safespot-job__meta">' + esc( __( 'Stopping…', 'tbsh-safespot-restore-points' ) ) + '</span>';
+			} else if ( lock && ! lock.cancellable ) {
+				html += '<span class="safespot-job__meta">' + esc( __( 'Files are being replaced. This step cannot be stopped safely and normally finishes within a minute.', 'tbsh-safespot-restore-points' ) ) + '</span>';
+			}
+			html += '</div><div class="safespot-job__actions">';
+			if ( ! lock || ( lock.cancellable && lock.responsive && ! lock.cancel_requested ) ) {
+				html += '<button type="button" class="button" data-safespot-action="job-cancel">' + esc( __( 'Cancel', 'tbsh-safespot-restore-points' ) ) + '</button>';
+			}
+			if ( lock && ! lock.responsive ) {
+				html += '<button type="button" class="button" data-safespot-action="job-force">' + esc( __( 'Release', 'tbsh-safespot-restore-points' ) ) + '</button>';
+			}
+			html += '</div>';
+
+			el.innerHTML = html;
+			el.hidden = false;
+			watch();
+		}
+
+		async function refresh() {
+			try {
+				render( await apiFetch( { path: NS + '/jobs' } ) );
+			} catch ( e ) {
+				// Status polling is best effort.
+			}
+		}
+
+		function watch() {
+			if ( ! timer ) {
+				timer = window.setInterval( refresh, 2500 );
+			}
+		}
+
+		function stop() {
+			if ( timer ) {
+				window.clearInterval( timer );
+				timer = null;
+			}
+		}
+
+		/**
+		 * Cancels the running job.
+		 *
+		 * @param {boolean} force Release the lock of a process that stopped responding.
+		 * @return {Promise<Object|null>} Response, or null on error.
+		 */
+		async function cancel( force = false ) {
+			if ( el ) {
+				$$( 'button', el ).forEach( ( button ) => ( button.disabled = true ) );
+			}
+			try {
+				const response = await apiFetch( { path: NS + '/jobs/cancel', method: 'POST', data: { force } } );
+				Notices.show( 'requested' === response.status ? 'warning' : 'success', response.message );
+				render( response.jobs );
+				return response;
+			} catch ( error ) {
+				Notices.show( 'safespot_nothing_running' === ( error && error.code ) ? 'info' : 'error', errorMessage( error ) );
+				refresh();
+				return null;
+			}
+		}
+
+		return {
+			render,
+			refresh,
+			cancel,
+			/**
+			 * Shows the job named in a "SafeSpot is busy" error and keeps it up to date.
+			 *
+			 * @param {Object} lock Lock info from the error.
+			 */
+			show( lock ) {
+				render( { running: true, lock, queue: {} } );
+				refresh();
+			},
+		};
+	} )();
+
+	/**
+	 * For a "SafeSpot is busy" error: shows the running job and returns a "Cancel it" button.
+	 *
+	 * @param {Object} error apiFetch error.
+	 * @return {HTMLElement|undefined} Paragraph with the button.
+	 */
+	function busyExtra( error ) {
+		if ( ! error || 'safespot_locked' !== error.code ) {
+			return undefined;
+		}
+		if ( error.data && error.data.lock ) {
+			Jobs.show( error.data.lock );
+		}
+		const button = document.createElement( 'button' );
+		button.type = 'button';
+		button.className = 'button';
+		button.textContent = __( 'Cancel the running job', 'tbsh-safespot-restore-points' );
+		button.addEventListener( 'click', async () => {
+			button.disabled = true;
+			const response = await Jobs.cancel( false );
+			if ( response && 'requested' !== response.status ) {
+				button.closest( 'p' ).textContent = __( 'The other job was cancelled. You can try again now.', 'tbsh-safespot-restore-points' );
+			} else {
+				button.disabled = false;
+			}
+		} );
+		const wrap = document.createElement( 'p' );
+		wrap.appendChild( button );
+		return wrap;
+	}
+
+	/**
+	 * Handles an operation that ended because it was cancelled.
+	 *
+	 * @param {Object} error apiFetch error.
+	 * @return {boolean} True when the error was a cancellation (and was handled).
+	 */
+	function handledCancel( error ) {
+		if ( ! error || 'safespot_cancelled' !== error.code ) {
+			return false;
+		}
+		Modal.close();
+		Notices.show( 'info', errorMessage( error ) );
+		Jobs.refresh();
+		return true;
+	}
 
 	/* ------------------------------------------------------------------ *
 	 * Helpers for item rows
@@ -297,6 +490,7 @@
 		}
 		applyFilters();
 		updateBulkButton();
+		syncPointSelection();
 	}
 
 	async function refreshItem( type, slug ) {
@@ -371,6 +565,268 @@
 	}
 
 	/* ------------------------------------------------------------------ *
+	 * SafeSpot selection (history rows)
+	 *
+	 * Selected IDs live in a Set so they survive row re-renders.
+	 * ------------------------------------------------------------------ */
+
+	const selectedPoints = new Set();
+	let lastPointBox = null;
+
+	/**
+	 * Selected SafeSpots that are still on the page, with their item context.
+	 *
+	 * @return {Array} [{ id, locked, version, date, name }].
+	 */
+	function selectedPointDetails() {
+		return $$( 'tr.safespot-point' )
+			.filter( ( row ) => selectedPoints.has( parseInt( row.dataset.id, 10 ) ) )
+			.map( ( row ) => {
+				const item = itemFrom( row );
+				return {
+					id: parseInt( row.dataset.id, 10 ),
+					locked: '1' === row.dataset.locked,
+					version: row.dataset.version,
+					date: row.dataset.date,
+					name: item ? item.name : '',
+				};
+			} );
+	}
+
+	/**
+	 * Applies the selection to checkboxes, row highlights, select-all boxes and the bar.
+	 */
+	function syncPointSelection() {
+		const present = new Set();
+		$$( '.safespot-point-select' ).forEach( ( box ) => {
+			const id = parseInt( box.value, 10 );
+			present.add( id );
+			box.checked = selectedPoints.has( id );
+			box.closest( 'tr' ).classList.toggle( 'is-selected', box.checked );
+		} );
+		Array.from( selectedPoints ).forEach( ( id ) => {
+			if ( ! present.has( id ) ) {
+				selectedPoints.delete( id );
+			}
+		} );
+
+		$$( '.safespot-history-table' ).forEach( ( table ) => {
+			const all = $( '.safespot-point-select-all', table );
+			if ( ! all ) {
+				return;
+			}
+			const boxes = $$( '.safespot-point-select', table );
+			const checked = boxes.filter( ( box ) => box.checked ).length;
+			all.checked = checked > 0 && checked === boxes.length;
+			all.indeterminate = checked > 0 && checked < boxes.length;
+		} );
+
+		updateSelectionBar();
+	}
+
+	function updateSelectionBar() {
+		const bar = $( '.safespot-selection-bar' );
+		if ( ! bar ) {
+			return;
+		}
+		const details = selectedPointDetails();
+		const count = details.length;
+		const locked = details.filter( ( point ) => point.locked ).length;
+		const items = new Set( details.map( ( point ) => point.name ) ).size;
+
+		bar.hidden = 0 === count;
+		/* translators: %d: number of SafeSpots. */
+		let text = sprintf( _n( '%d SafeSpot selected', '%d SafeSpots selected', count, 'tbsh-safespot-restore-points' ), count );
+		if ( items > 1 ) {
+			/* translators: %d: number of items. */
+			text += ' · ' + sprintf( _n( '%d item', '%d items', items, 'tbsh-safespot-restore-points' ), items );
+		}
+		$( '.safespot-selection-bar__count', bar ).textContent = count ? text : '';
+
+		const lockButton = $( '[data-safespot-action="bulk-lock"]', bar );
+		const unlockButton = $( '[data-safespot-action="bulk-unlock"]', bar );
+		if ( lockButton ) {
+			lockButton.disabled = locked === count;
+		}
+		if ( unlockButton ) {
+			unlockButton.disabled = 0 === locked;
+		}
+	}
+
+	function clearPointSelection() {
+		selectedPoints.clear();
+		lastPointBox = null;
+		syncPointSelection();
+	}
+
+	/**
+	 * Checks or unchecks one SafeSpot; with Shift, the whole range from the last click
+	 * in the same history table.
+	 *
+	 * @param {HTMLInputElement} box   Checkbox that was clicked.
+	 * @param {boolean}          range Whether Shift was held.
+	 */
+	function togglePointBox( box, range ) {
+		const table = box.closest( '.safespot-history-table' );
+		let boxes = [ box ];
+		if ( range && lastPointBox && lastPointBox !== box && table && table.contains( lastPointBox ) ) {
+			const all = $$( '.safespot-point-select', table );
+			const from = all.indexOf( lastPointBox );
+			const to = all.indexOf( box );
+			boxes = all.slice( Math.min( from, to ), Math.max( from, to ) + 1 );
+		}
+		boxes.forEach( ( other ) => {
+			const id = parseInt( other.value, 10 );
+			if ( box.checked ) {
+				selectedPoints.add( id );
+			} else {
+				selectedPoints.delete( id );
+			}
+		} );
+		lastPointBox = box;
+		syncPointSelection();
+	}
+
+	/**
+	 * Runs a bulk action and refreshes the affected rows.
+	 *
+	 * @param {string}  action        lock|unlock|delete.
+	 * @param {Array}   ids           SafeSpot IDs.
+	 * @param {boolean} includeLocked Delete locked SafeSpots too.
+	 * @return {Promise<Object>} Response.
+	 */
+	async function runPointBulk( action, ids, includeLocked = false ) {
+		const response = await apiFetch( {
+			path: NS + '/points/bulk',
+			method: 'POST',
+			data: { action, ids, include_locked: includeLocked },
+		} );
+		( response.done || [] ).forEach( ( id ) => selectedPoints.delete( id ) );
+		( response.rows || [] ).forEach( replaceRow );
+		syncPointSelection();
+		const partial = ( response.failed || [] ).length || Object.values( response.skipped || {} ).some( ( list ) => list.length );
+		Notices.show( partial ? 'warning' : 'success', response.message );
+		return response;
+	}
+
+	async function bulkLock( button, lock ) {
+		const ids = selectedPointDetails()
+			.filter( ( point ) => point.locked !== lock )
+			.map( ( point ) => point.id );
+		if ( ! ids.length ) {
+			return;
+		}
+		const bar = button.closest( '.safespot-selection-bar' );
+		$$( 'button', bar ).forEach( ( el ) => ( el.disabled = true ) );
+		try {
+			await runPointBulk( lock ? 'lock' : 'unlock', ids );
+			clearPointSelection();
+		} catch ( error ) {
+			Notices.show( 'error', errorMessage( error ) );
+		} finally {
+			$$( 'button', bar ).forEach( ( el ) => ( el.disabled = false ) );
+			updateSelectionBar();
+		}
+	}
+
+	function openBulkDelete() {
+		const details = selectedPointDetails();
+		if ( ! details.length ) {
+			return;
+		}
+		const locked = details.filter( ( point ) => point.locked ).length;
+
+		const groups = new Map();
+		details.forEach( ( point ) => {
+			if ( ! groups.has( point.name ) ) {
+				groups.set( point.name, [] );
+			}
+			groups.get( point.name ).push( point );
+		} );
+
+		let list = '<ul class="safespot-bulk-list">';
+		groups.forEach( ( points, name ) => {
+			list +=
+				'<li><strong>' +
+				esc( name ) +
+				'</strong><ul>' +
+				points
+					.map(
+						( point ) =>
+							'<li>' +
+							esc( point.version || '—' ) +
+							' <span class="safespot-muted">· ' +
+							esc( point.date ) +
+							'</span>' +
+							( point.locked ? ' <span class="dashicons dashicons-lock safespot-lock-icon" aria-hidden="true"></span><span class="screen-reader-text">' + esc( __( 'Locked', 'tbsh-safespot-restore-points' ) ) + '</span>' : '' ) +
+							'</li>'
+					)
+					.join( '' ) +
+				'</ul></li>';
+		} );
+		list += '</ul>';
+
+		let body =
+			'<p>' +
+			esc(
+				/* translators: %d: number of SafeSpots. */
+				sprintf( _n( 'Delete %d SafeSpot? The archive is removed permanently.', 'Delete %d SafeSpots? The archives are removed permanently.', details.length, 'tbsh-safespot-restore-points' ), details.length )
+			) +
+			'</p>' +
+			list;
+
+		if ( locked ) {
+			body +=
+				'<div class="notice notice-warning inline"><p><label><input type="checkbox" id="safespot-include-locked" /> ' +
+				esc(
+					/* translators: %d: number of locked SafeSpots. */
+					sprintf( _n( 'Also delete %d locked SafeSpot', 'Also delete %d locked SafeSpots', locked, 'tbsh-safespot-restore-points' ), locked )
+				) +
+				'</label></p><p class="description">' +
+				esc( __( 'Locked SafeSpots are kept unless you tick this box.', 'tbsh-safespot-restore-points' ) ) +
+				'</p></div>';
+		}
+
+		const label = ( includeLocked ) => {
+			const count = includeLocked ? details.length : details.length - locked;
+			if ( ! count ) {
+				return __( 'Delete SafeSpots', 'tbsh-safespot-restore-points' );
+			}
+			/* translators: %d: number of SafeSpots. */
+			return sprintf( _n( 'Delete %d SafeSpot', 'Delete %d SafeSpots', count, 'tbsh-safespot-restore-points' ), count );
+		};
+
+		Modal.open( {
+			title: __( 'Delete selected SafeSpots?', 'tbsh-safespot-restore-points' ),
+			body,
+			confirmLabel: label( false ),
+			confirmDisabled: locked === details.length,
+			destructive: true,
+			onConfirm: async () => {
+				const includeBox = $( '#safespot-include-locked', Modal.body );
+				const includeLocked = !! ( includeBox && includeBox.checked );
+				const ids = details.filter( ( point ) => includeLocked || ! point.locked ).map( ( point ) => point.id );
+				Modal.setBusy( true, __( 'Deleting…', 'tbsh-safespot-restore-points' ) );
+				try {
+					await runPointBulk( 'delete', ids, includeLocked );
+					Modal.close();
+					clearPointSelection();
+				} catch ( error ) {
+					Modal.setBusy( false );
+					Modal.setError( errorMessage( error ) );
+				}
+			},
+		} );
+
+		const includeBox = $( '#safespot-include-locked', Modal.body );
+		if ( includeBox ) {
+			includeBox.addEventListener( 'change', () => {
+				Modal.setConfirm( label( includeBox.checked ), ! includeBox.checked && locked === details.length, true );
+			} );
+		}
+	}
+
+	/* ------------------------------------------------------------------ *
 	 * Actions
 	 * ------------------------------------------------------------------ */
 
@@ -420,14 +876,18 @@
 					data.prefixes = $( '#safespot-prefixes', Modal.body ).value;
 				}
 				Modal.setBusy( true, __( 'Creating the archive… large plugins can take a minute.', 'tbsh-safespot-restore-points' ) );
+				Modal.setStoppable( true );
 				try {
 					const response = await apiFetch( { path: NS + '/points', method: 'POST', data } );
 					Modal.close();
 					replaceRow( response );
-					Notices.show( 'success', response.message );
+					Notices.show( response.reused ? 'info' : 'success', response.message );
 				} catch ( error ) {
+					if ( handledCancel( error ) ) {
+						return;
+					}
 					Modal.setBusy( false );
-					Modal.setError( errorMessage( error ) );
+					Modal.setError( errorMessage( error ), busyExtra( error ) );
 				}
 			},
 		} );
@@ -627,9 +1087,12 @@
 			];
 			let step = 0;
 			Modal.setBusy( true, steps[ 0 ] );
+			Modal.setStoppable( true );
 			const timer = window.setInterval( () => {
 				step = Math.min( step + 1, steps.length - 1 );
 				Modal.setBusy( true, steps[ step ] );
+				// The server refuses to stop once files are being replaced.
+				Modal.setStoppable( step < 2 );
 			}, 3500 );
 			restoreInProgress = true;
 
@@ -648,6 +1111,9 @@
 			} catch ( error ) {
 				window.clearInterval( timer );
 				restoreInProgress = false;
+				if ( handledCancel( error ) ) {
+					return;
+				}
 				Modal.setBusy( false );
 				Modal.setConfirm( label, true );
 				if ( error && error.data && error.data.html ) {
@@ -663,7 +1129,7 @@
 					wrap.appendChild( button );
 					Modal.setError( __( 'The server stopped responding during the restore. The restored version may have caused a fatal error. You can roll back to the safety SafeSpot now.', 'tbsh-safespot-restore-points' ), wrap );
 				} else {
-					Modal.setError( errorMessage( error ) );
+					Modal.setError( errorMessage( error ), busyExtra( error ) );
 				}
 			}
 		} );
@@ -849,17 +1315,28 @@
 			}
 
 			statusEl.hidden = true;
-			const failed = status.failed || [];
-			if ( failed.length ) {
-				Notices.show(
-					'warning',
-					/* translators: 1: number saved, 2: number failed. */
-					sprintf( __( '%1$d SafeSpots saved, %2$d failed. See the Activity Log for details.', 'tbsh-safespot-restore-points' ), status.done - failed.length, failed.length )
-				);
-			} else {
-				/* translators: %d: number of SafeSpots. */
-				Notices.show( 'success', sprintf( _n( '%d SafeSpot saved.', '%d SafeSpots saved.', status.done, 'tbsh-safespot-restore-points' ), status.done ) );
+			if ( ! status.total ) {
+				Notices.show( 'info', __( 'Bulk saving was cancelled.', 'tbsh-safespot-restore-points' ) );
+				for ( const item of items ) {
+					await refreshItem( item.type, item.slug );
+				}
+				return;
 			}
+			const failed = status.failed || [];
+			const unchanged = status.unchanged || 0;
+			const saved = Math.max( 0, status.done - failed.length - unchanged );
+			let summary = failed.length
+				? /* translators: 1: number saved, 2: number failed. */
+				  sprintf( __( '%1$d SafeSpots saved, %2$d failed. See the Activity Log for details.', 'tbsh-safespot-restore-points' ), saved, failed.length )
+				: /* translators: %d: number of SafeSpots. */
+				  sprintf( _n( '%d SafeSpot saved.', '%d SafeSpots saved.', saved, 'tbsh-safespot-restore-points' ), saved );
+			if ( unchanged ) {
+				summary +=
+					' ' +
+					/* translators: %d: number of items. */
+					sprintf( _n( '%d item had not changed since its last SafeSpot, so no duplicate was saved.', '%d items had not changed since their last SafeSpot, so no duplicates were saved.', unchanged, 'tbsh-safespot-restore-points' ), unchanged );
+			}
+			Notices.show( failed.length ? 'warning' : 'success', summary );
 
 			for ( const item of items ) {
 				await refreshItem( item.type, item.slug );
@@ -868,6 +1345,7 @@
 		} catch ( error ) {
 			statusEl.hidden = true;
 			Notices.show( 'error', errorMessage( error ) );
+			busyExtra( error );
 		} finally {
 			trigger.disabled = false;
 			updateBulkButton();
@@ -922,6 +1400,35 @@
 	 * ------------------------------------------------------------------ */
 
 	document.addEventListener( 'click', ( event ) => {
+		const pointBox = event.target.closest( '.safespot-point-select' );
+		if ( pointBox ) {
+			togglePointBox( pointBox, event.shiftKey );
+			return;
+		}
+
+		// Job controls must work while a dialog is busy (that is when they are needed).
+		const jobButton = event.target.closest( '[data-safespot-action^="job-"]' );
+		if ( jobButton ) {
+			const jobAction = jobButton.dataset.safespotAction;
+			if ( 'job-stop' === jobAction ) {
+				jobButton.disabled = true;
+				Modal.setBusy( true, __( 'Stopping…', 'tbsh-safespot-restore-points' ) );
+				Jobs.cancel( false ).then( ( response ) => {
+					if ( ! response ) {
+						Modal.setStoppable( false );
+					}
+				} );
+			} else if ( 'job-force' === jobAction ) {
+				// eslint-disable-next-line no-alert
+				if ( window.confirm( __( 'Release this operation? Only do this if it has really stopped, for example because the server timed out.', 'tbsh-safespot-restore-points' ) ) ) {
+					Jobs.cancel( true );
+				}
+			} else {
+				Jobs.cancel( false );
+			}
+			return;
+		}
+
 		const target = event.target.closest( '[data-safespot-action], .safespot-rollback-last' );
 		if ( ! target || ( Modal && Modal.isBusy() ) ) {
 			return;
@@ -982,6 +1489,24 @@
 			case 'clear-log':
 				clearLog();
 				break;
+			case 'bulk-lock':
+				bulkLock( target, true );
+				break;
+			case 'bulk-unlock':
+				bulkLock( target, false );
+				break;
+			case 'bulk-delete':
+				openBulkDelete();
+				break;
+			case 'clear-selection':
+				clearPointSelection();
+				break;
+		}
+	} );
+
+	document.addEventListener( 'keydown', ( event ) => {
+		if ( 'Escape' === event.key && selectedPoints.size && ! ( Modal && Modal.body.closest( 'dialog' ).open ) && ! event.target.closest( 'input, textarea, select' ) ) {
+			clearPointSelection();
 		}
 	} );
 
@@ -1017,6 +1542,19 @@
 			return;
 		}
 
+		if ( target.classList.contains( 'safespot-point-select-all' ) ) {
+			$$( '.safespot-point-select', target.closest( '.safespot-history-table' ) ).forEach( ( box ) => {
+				const id = parseInt( box.value, 10 );
+				if ( target.checked ) {
+					selectedPoints.add( id );
+				} else {
+					selectedPoints.delete( id );
+				}
+			} );
+			syncPointSelection();
+			return;
+		}
+
 		if ( 'safespot-filter' === target.id ) {
 			applyFilters();
 		}
@@ -1036,6 +1574,8 @@
 	}
 
 	applyFilters();
+	syncPointSelection();
+	Jobs.render( config.jobs );
 
 	const expanded = $( 'tbody.safespot-item.is-expanded' );
 	if ( expanded ) {

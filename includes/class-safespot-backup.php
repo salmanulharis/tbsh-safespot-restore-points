@@ -27,7 +27,7 @@ class SafeSpot_Backup {
 	 *     @type bool      $prune            Apply retention afterwards.
 	 *     @type int[]     $protect_ids      IDs retention must keep.
 	 * }
-	 * @return array|WP_Error Formatted SafeSpot.
+	 * @return array|WP_Error Formatted SafeSpot. `reused` is true when nothing changed since the newest SafeSpot, which is returned instead of a duplicate.
 	 */
 	public function save( $type, $slug, array $args = array() ) {
 		$args = wp_parse_args(
@@ -51,16 +51,32 @@ class SafeSpot_Backup {
 		$args['note']     = sanitize_textarea_field( (string) $args['note'] );
 
 		if ( ! SafeSpot_Lock::acquire( 'save:' . $type . ':' . $slug, (int) $args['lock_wait'] ) ) {
-			return new WP_Error( 'safespot_locked', __( 'Another SafeSpot backup or restore is running. Please try again in a moment.', 'tbsh-safespot-restore-points' ), array( 'status' => 409 ) );
+			return SafeSpot_Lock::busy_error();
 		}
 
 		try {
 			$result = $this->do_save( $item, $args, $include_settings );
 		} finally {
+			SafeSpot_Zip::forget_scan();
 			SafeSpot_Lock::release();
 		}
 
 		$log_action = in_array( $args['source'], array( 'auto_update', 'pre_restore', 'pre_delete' ), true ) ? 'auto' : 'save';
+
+		if ( is_wp_error( $result ) && 'safespot_cancelled' === $result->get_error_code() ) {
+			SafeSpot_Logger::log(
+				$log_action,
+				'warning',
+				/* translators: %s: item name. */
+				sprintf( __( 'Saving a SafeSpot of %s was cancelled. Nothing was saved.', 'tbsh-safespot-restore-points' ), $item['name'] ),
+				array(
+					'type' => $type,
+					'slug' => $slug,
+					'name' => $item['name'],
+				)
+			);
+			return $result;
+		}
 
 		if ( is_wp_error( $result ) ) {
 			SafeSpot_Logger::log(
@@ -77,6 +93,12 @@ class SafeSpot_Backup {
 			return $result;
 		}
 
+		if ( $result['reused'] ) {
+			return $this->reuse( $result['point'], $item, $args, $log_action );
+		}
+
+		$point = $result['point'];
+
 		SafeSpot_Logger::log(
 			$log_action,
 			'success',
@@ -85,36 +107,121 @@ class SafeSpot_Backup {
 				__( 'Saved %1$s %2$s (%3$s) – %4$s', 'tbsh-safespot-restore-points' ),
 				$item['name'],
 				$item['version'],
-				size_format( $result['file_size'], 1 ),
-				SafeSpot_Points::source_label( $result['source'] )
+				size_format( $point['file_size'], 1 ),
+				SafeSpot_Points::source_label( $point['source'] )
 			),
 			array(
 				'type'     => $type,
 				'slug'     => $slug,
 				'name'     => $item['name'],
-				'point_id' => $result['id'],
+				'point_id' => $point['id'],
 			)
 		);
 
 		if ( $args['prune'] ) {
 			$protect   = array_map( 'intval', (array) $args['protect_ids'] );
-			$protect[] = (int) $result['id'];
+			$protect[] = (int) $point['id'];
 			$this->prune_item( $type, $slug, $protect );
 		}
 
-		return SafeSpot_Points::format( $result );
+		$formatted           = SafeSpot_Points::format( $point );
+		$formatted['reused'] = false;
+		return $formatted;
+	}
+
+	/**
+	 * Returns an existing identical SafeSpot instead of saving a duplicate.
+	 *
+	 * @param array  $point      Existing SafeSpot row.
+	 * @param array  $item       Item being saved.
+	 * @param array  $args       Save arguments.
+	 * @param string $log_action Log action.
+	 * @return array Formatted SafeSpot with reused = true.
+	 */
+	private function reuse( array $point, array $item, array $args, $log_action ) {
+		// Keep the note the user typed when the existing SafeSpot has none.
+		if ( '' !== $args['note'] && '' === $point['note'] ) {
+			SafeSpot_Points::update( $point['id'], array( 'note' => substr( $args['note'], 0, 1000 ) ) );
+			$point = SafeSpot_Points::get( $point['id'] );
+		}
+
+		SafeSpot_Logger::log(
+			$log_action,
+			'info',
+			sprintf(
+				/* translators: 1: item name, 2: version, 3: date. */
+				__( 'No new SafeSpot needed for %1$s %2$s: nothing has changed since the SafeSpot saved %3$s, so that one is kept.', 'tbsh-safespot-restore-points' ),
+				$item['name'],
+				$item['version'],
+				SafeSpot_Points::human_date( $point['created_ts'] )
+			),
+			array(
+				'type'     => $item['type'],
+				'slug'     => $item['slug'],
+				'name'     => $item['name'],
+				'point_id' => $point['id'],
+			)
+		);
+
+		/**
+		 * Fires when a save request is answered with an existing, identical SafeSpot.
+		 *
+		 * @param array $point SafeSpot record that was kept.
+		 * @param array $item  Item that was being saved.
+		 * @param array $args  Save arguments.
+		 */
+		do_action( 'safespot_duplicate_skipped', $point, $item, $args );
+
+		$formatted           = SafeSpot_Points::format( $point );
+		$formatted['reused'] = true;
+		return $formatted;
 	}
 
 	/**
 	 * Performs the archive work (lock already held).
 	 *
+	 * The duplicate check runs here, inside the lock, so concurrent requests for the
+	 * same item (double clicks, a retried update, cron and the admin screen working
+	 * the queue at once) cannot both save the same content.
+	 *
 	 * @param array $item             Item.
 	 * @param array $args             Arguments.
 	 * @param bool  $include_settings Whether to snapshot options.
-	 * @return array|WP_Error Raw SafeSpot row.
+	 * @return array|WP_Error { point: raw SafeSpot row, reused: bool }.
 	 */
 	private function do_save( array $item, array $args, $include_settings ) {
 		SafeSpot_Plugin::raise_limits();
+
+		/**
+		 * Filters relative paths (from the item folder root) excluded from archives.
+		 *
+		 * Empty by default so SafeSpots are exact copies.
+		 *
+		 * @param string[] $exclude Relative paths or fnmatch() patterns, e.g. ".git".
+		 * @param array    $item    Item being saved.
+		 */
+		$exclude = (array) apply_filters( 'safespot_backup_exclude', array(), $item );
+
+		$fingerprint = SafeSpot_Zip::fingerprint( $item['path'], $exclude );
+		if ( is_wp_error( $fingerprint ) ) {
+			return $fingerprint;
+		}
+
+		$snapshot             = null;
+		$settings_fingerprint = '';
+		if ( $include_settings ) {
+			SafeSpot_Lock::phase( 'settings' );
+			$snapshot             = SafeSpot_Settings_Snapshot::export( $item['type'], $item['slug'] );
+			$settings_fingerprint = SafeSpot_Settings_Snapshot::fingerprint( $snapshot );
+		}
+
+		$identical = $this->find_identical( $item, $fingerprint, $settings_fingerprint, $args );
+		if ( $identical ) {
+			return array(
+				'point'  => $identical,
+				'reused' => true,
+			);
+		}
 
 		/**
 		 * Fires before a SafeSpot archive is created.
@@ -143,16 +250,6 @@ class SafeSpot_Backup {
 		$partial   = $tmp . $file_name . '.part';
 		$final     = $dir . $file_name;
 
-		/**
-		 * Filters relative paths (from the item folder root) excluded from archives.
-		 *
-		 * Empty by default so SafeSpots are exact copies.
-		 *
-		 * @param string[] $exclude Relative paths or fnmatch() patterns, e.g. ".git".
-		 * @param array    $item    Item being saved.
-		 */
-		$exclude = (array) apply_filters( 'safespot_backup_exclude', array(), $item );
-
 		$zip = SafeSpot_Zip::create( $item['path'], $partial, $exclude );
 		if ( is_wp_error( $zip ) ) {
 			return $zip;
@@ -162,6 +259,11 @@ class SafeSpot_Backup {
 		if ( ! $fs->move( $partial, $final, true ) ) {
 			$fs->delete( $partial );
 			return new WP_Error( 'safespot_move_failed', __( 'Could not move the archive into the storage folder.', 'tbsh-safespot-restore-points' ) );
+		}
+
+		if ( SafeSpot_Lock::phase( 'verifying' ) ) {
+			$fs->delete( $final );
+			return SafeSpot_Lock::cancelled_error();
 		}
 
 		$required = $this->required_entry( $item );
@@ -176,9 +278,8 @@ class SafeSpot_Backup {
 			'checksum'  => '',
 			'count'     => 0,
 		);
-		if ( $include_settings ) {
-			$snapshot = SafeSpot_Settings_Snapshot::export( $item['type'], $item['slug'] );
-			$written  = SafeSpot_Settings_Snapshot::write( $snapshot, preg_replace( '/\.zip$/', '', $file_name ) . '.settings.json' );
+		if ( null !== $snapshot ) {
+			$written = SafeSpot_Settings_Snapshot::write( $snapshot, preg_replace( '/\.zip$/', '', $file_name ) . '.settings.json' );
 			if ( is_wp_error( $written ) ) {
 				$fs->delete( $final );
 				return $written;
@@ -186,25 +287,34 @@ class SafeSpot_Backup {
 			$settings = $written;
 		}
 
+		// Last chance to cancel: after this the SafeSpot exists.
+		if ( SafeSpot_Lock::checkpoint() ) {
+			$fs->delete( $final );
+			SafeSpot_Storage::delete( $settings['file_name'] );
+			return SafeSpot_Lock::cancelled_error();
+		}
+
 		$row = array(
-			'item_type'         => $item['type'],
-			'slug'              => $item['slug'],
-			'name'              => $item['name'],
-			'version'           => $item['version'],
-			'file_name'         => $file_name,
-			'file_size'         => (int) filesize( $final ),
-			'uncompressed_size' => $zip['uncompressed_size'],
-			'file_count'        => $zip['file_count'],
-			'checksum'          => hash_file( 'sha256', $final ),
-			'settings_file'     => $settings['file_name'],
-			'settings_checksum' => $settings['checksum'],
-			'settings_count'    => $settings['count'],
-			'note'              => $args['note'],
-			'source'            => $args['source'],
-			'requires_wp'       => $item['requires_wp'],
-			'requires_php'      => $item['requires_php'],
-			'parent_theme'      => $item['parent'],
-			'created_by'        => get_current_user_id(),
+			'item_type'            => $item['type'],
+			'slug'                 => $item['slug'],
+			'name'                 => $item['name'],
+			'version'              => $item['version'],
+			'file_name'            => $file_name,
+			'file_size'            => (int) filesize( $final ),
+			'uncompressed_size'    => $zip['uncompressed_size'],
+			'file_count'           => $zip['file_count'],
+			'checksum'             => hash_file( 'sha256', $final ),
+			'settings_file'        => $settings['file_name'],
+			'settings_checksum'    => $settings['checksum'],
+			'settings_count'       => $settings['count'],
+			'fingerprint'          => $fingerprint,
+			'settings_fingerprint' => $settings_fingerprint,
+			'note'                 => $args['note'],
+			'source'               => $args['source'],
+			'requires_wp'          => $item['requires_wp'],
+			'requires_php'         => $item['requires_php'],
+			'parent_theme'         => $item['parent'],
+			'created_by'           => get_current_user_id(),
 		);
 
 		$id = SafeSpot_Points::insert( $row );
@@ -225,7 +335,56 @@ class SafeSpot_Backup {
 		 */
 		do_action( 'safespot_after_save', $point, $item, $args );
 
-		return $point;
+		return array(
+			'point'  => $point,
+			'reused' => false,
+		);
+	}
+
+	/**
+	 * Newest SafeSpot of the item when it holds exactly the content about to be saved.
+	 *
+	 * Only the newest SafeSpot is compared, so retention ("keep the last N") can never
+	 * remove the copy that stands in for the current version. Its archive (and settings
+	 * file, when settings are requested) must still pass their checksums.
+	 *
+	 * @param array  $item                 Item being saved.
+	 * @param string $fingerprint          Files fingerprint.
+	 * @param string $settings_fingerprint Settings fingerprint ('' = settings not requested).
+	 * @param array  $args                 Save arguments.
+	 * @return array|null Raw SafeSpot row.
+	 */
+	private function find_identical( array $item, $fingerprint, $settings_fingerprint, array $args ) {
+		$latest = SafeSpot_Points::latest( $item['type'], $item['slug'] );
+
+		if ( ! $latest || '' === $latest['fingerprint'] || ! hash_equals( $latest['fingerprint'], $fingerprint ) || $latest['version'] !== $item['version'] ) {
+			return null;
+		}
+
+		if ( '' !== $settings_fingerprint ) {
+			if ( '' === $latest['settings_file'] || ! hash_equals( (string) $latest['settings_fingerprint'], $settings_fingerprint ) ) {
+				return null;
+			}
+			$settings_path = SafeSpot_Storage::path( $latest['settings_file'] );
+			if ( is_wp_error( $settings_path ) || ! is_readable( $settings_path ) || ! hash_equals( (string) $latest['settings_checksum'], (string) hash_file( 'sha256', $settings_path ) ) ) {
+				return null;
+			}
+		}
+
+		$path = SafeSpot_Storage::path( $latest['file_name'] );
+		if ( is_wp_error( $path ) || ! is_readable( $path ) || '' === $latest['checksum'] || ! hash_equals( $latest['checksum'], (string) hash_file( 'sha256', $path ) ) ) {
+			return null;
+		}
+
+		/**
+		 * Filters whether an identical existing SafeSpot is kept instead of saving a new one.
+		 *
+		 * @param bool  $reuse  Whether to reuse the existing SafeSpot (default true).
+		 * @param array $latest Existing SafeSpot record with the same content.
+		 * @param array $item   Item being saved.
+		 * @param array $args   Save arguments (note, source...).
+		 */
+		return apply_filters( 'safespot_reuse_identical', true, $latest, $item, $args ) ? $latest : null;
 	}
 
 	/**

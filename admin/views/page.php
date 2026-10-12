@@ -30,6 +30,8 @@ defined( 'ABSPATH' ) || exit;
 
 	<div id="safespot-notices" class="safespot-notices" aria-live="polite"></div>
 
+	<div id="safespot-job" class="safespot-job" role="status" aria-live="polite" hidden></div>
+
 	<main class="safespot-main">
 		<?php SafeSpot_Admin_Views::template( 'tab-' . ( in_array( $tab, array( 'plugins', 'themes' ), true ) ? 'items' : $tab ), array( 'tab' => $tab ) ); ?>
 	</main>
@@ -46,6 +48,7 @@ defined( 'ABSPATH' ) || exit;
 			<div class="safespot-modal__progress" hidden>
 				<div class="safespot-progress" role="progressbar" aria-valuetext="" aria-busy="true"><span class="safespot-progress__bar"></span></div>
 				<p class="safespot-modal__progress-text" aria-live="polite"></p>
+				<button type="button" class="button safespot-modal__stop" data-safespot-action="job-stop" hidden><?php esc_html_e( 'Stop', 'tbsh-safespot-restore-points' ); ?></button>
 			</div>
 			<footer class="safespot-modal__footer">
 				<button type="button" class="button" data-safespot-close><?php esc_html_e( 'Cancel', 'tbsh-safespot-restore-points' ); ?></button>

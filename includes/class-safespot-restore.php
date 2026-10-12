@@ -200,7 +200,8 @@ class SafeSpot_Restore {
 		if ( ! SafeSpot_Lock::is_owner() ) {
 			$lock = SafeSpot_Lock::current();
 			if ( $lock ) {
-				$add( 'lock', 'fail', __( 'No other operation running', 'tbsh-safespot-restore-points' ), __( 'Another SafeSpot backup or restore is in progress. Try again when it finishes.', 'tbsh-safespot-restore-points' ) );
+				/* translators: %s: description of the running operation. */
+				$add( 'lock', 'fail', __( 'No other operation running', 'tbsh-safespot-restore-points' ), sprintf( __( 'SafeSpot is busy: %s. Try again when it finishes, or cancel it.', 'tbsh-safespot-restore-points' ), $lock['summary'] ) );
 			}
 		}
 
@@ -385,7 +386,7 @@ class SafeSpot_Restore {
 		SafeSpot_Plugin::raise_limits();
 
 		if ( ! SafeSpot_Lock::acquire( 'restore:' . $point['item_type'] . ':' . $point['slug'], 0 ) ) {
-			return new WP_Error( 'safespot_locked', __( 'Another SafeSpot backup or restore is running. Please try again in a moment.', 'tbsh-safespot-restore-points' ), array( 'status' => 409 ) );
+			return SafeSpot_Lock::busy_error();
 		}
 
 		register_shutdown_function( array( $this, 'shutdown' ) );
@@ -405,6 +406,11 @@ class SafeSpot_Restore {
 			'name'     => $point['name'],
 			'point_id' => $point['id'],
 		);
+
+		if ( is_wp_error( $result ) && 'safespot_cancelled' === $result->get_error_code() ) {
+			SafeSpot_Logger::log( $action, 'warning', $result->get_error_message(), $log );
+			return $result;
+		}
 
 		if ( is_wp_error( $result ) ) {
 			SafeSpot_Logger::log(
@@ -435,6 +441,8 @@ class SafeSpot_Restore {
 	 * @return array|WP_Error
 	 */
 	private function do_restore( array $point, array $args ) {
+		SafeSpot_Lock::phase( 'preparing' );
+
 		$preflight = $this->preflight( $point['id'] );
 		if ( is_wp_error( $preflight ) ) {
 			return $preflight;
@@ -474,6 +482,7 @@ class SafeSpot_Restore {
 		// 1. Safety SafeSpot of the current version, so every restore can be undone.
 		$pre_point = null;
 		if ( $item && ! $args['is_rollback'] ) {
+			SafeSpot_Lock::phase( 'safety' );
 			$saved = $this->backup->save(
 				$pi['type'],
 				$pi['slug'],
@@ -485,12 +494,24 @@ class SafeSpot_Restore {
 					'prune'            => false,
 				)
 			);
+			if ( is_wp_error( $saved ) && 'safespot_cancelled' === $saved->get_error_code() ) {
+				return $this->cancelled( $point );
+			}
 			if ( is_wp_error( $saved ) ) {
 				/* translators: %s: error message. */
 				return new WP_Error( 'safespot_pre_backup_failed', sprintf( __( 'Could not save a safety SafeSpot of the current version, so the restore was cancelled: %s', 'tbsh-safespot-restore-points' ), $saved->get_error_message() ) );
 			}
 			$pre_point = SafeSpot_Points::get( $saved['id'] );
 		}
+
+		/*
+		 * Last chance to cancel. From here on the restore runs to the end: stopping while
+		 * files are being replaced would leave a broken plugin or theme behind.
+		 */
+		if ( SafeSpot_Lock::checkpoint() ) {
+			return $this->cancelled( $point );
+		}
+		SafeSpot_Lock::set_cancellable( false );
 
 		$last = array(
 			'type'              => $pi['type'],
@@ -511,6 +532,8 @@ class SafeSpot_Restore {
 		}
 
 		// 2. Replace the files.
+		SafeSpot_Lock::phase( 'replacing' );
+
 		$replaced = $this->replace_files( $point, $state );
 		if ( is_wp_error( $replaced ) ) {
 			$message = $replaced->get_error_message();
@@ -544,6 +567,7 @@ class SafeSpot_Restore {
 		$health    = null;
 		$do_health = null === $args['health_check'] ? (bool) SafeSpot_Settings::get( 'health_check' ) : (bool) $args['health_check'];
 		if ( $do_health && $state['active'] ) {
+			SafeSpot_Lock::phase( 'health' );
 			$health = SafeSpot_Health::check( 'plugin' === $pi['type'] ? 'admin' : 'front' );
 
 			if ( 'fatal' === $health['status'] ) {
@@ -602,6 +626,21 @@ class SafeSpot_Restore {
 		do_action( 'safespot_after_restore', $point, $item, $result );
 
 		return $result;
+	}
+
+	/**
+	 * Error for a restore that was cancelled before any file was changed.
+	 *
+	 * @param array $point SafeSpot that was going to be restored.
+	 * @return WP_Error
+	 */
+	private function cancelled( array $point ) {
+		return new WP_Error(
+			'safespot_cancelled',
+			/* translators: 1: item name, 2: version. */
+			sprintf( __( 'Restoring %1$s %2$s was cancelled before any file was changed.', 'tbsh-safespot-restore-points' ), $point['name'], $point['version'] ),
+			array( 'status' => 409 )
+		);
 	}
 
 	/**

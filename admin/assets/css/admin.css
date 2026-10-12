@@ -417,6 +417,64 @@ html[data-theme="dark"] .safespot-modal {
 	margin: 8px 0 0;
 }
 
+/* Running job (what holds the SafeSpot lock). */
+.safespot-job {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px 16px;
+	align-items: center;
+	margin: 0 0 16px;
+	padding: 12px 16px;
+	color: var(--safespot-text);
+	background: var(--safespot-surface);
+	border: 1px solid var(--safespot-border);
+	border-left: 4px solid var(--safespot-accent);
+	border-radius: var(--safespot-radius);
+}
+
+.safespot-job[hidden] {
+	display: none;
+}
+
+.safespot-job .spinner {
+	float: none;
+	margin: 0;
+}
+
+.safespot-job__text {
+	display: flex;
+	flex: 1 1 280px;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+}
+
+.safespot-job__meta {
+	color: var(--safespot-muted);
+	overflow-wrap: anywhere;
+}
+
+.safespot-job__warning {
+	color: var(--safespot-warning);
+}
+
+.safespot-job .safespot-progress {
+	max-width: 420px;
+}
+
+.safespot-job__actions {
+	display: flex;
+	gap: 8px;
+}
+
+.safespot-modal__stop {
+	margin-top: 8px;
+}
+
+.safespot-modal__stop[hidden] {
+	display: none;
+}
+
 /* -------------------------------------------------------------------------
  * Items table
  * ---------------------------------------------------------------------- */
@@ -572,8 +630,101 @@ html[data-theme="dark"] .safespot-modal {
 	border-bottom: 0;
 }
 
-.safespot-point.is-locked td:first-child {
+.safespot-point.is-locked > :first-child {
 	box-shadow: inset 3px 0 0 var(--safespot-accent);
+}
+
+.safespot-items .safespot-history-table .check-column {
+	width: 2.2em;
+	padding: 8px 0 8px 6px;
+	vertical-align: middle;
+	border-bottom: 1px solid var(--safespot-border);
+}
+
+.safespot-items .safespot-history-table tr:last-child .check-column {
+	border-bottom: 0;
+}
+
+.safespot-items .safespot-history-table .check-column input {
+	margin: 0;
+}
+
+.safespot-point.is-selected > * {
+	background: var(--safespot-info-bg);
+}
+
+/* Floating bar for actions on the selected SafeSpots. */
+.safespot-selection-bar {
+	position: sticky;
+	bottom: 0;
+	z-index: 20;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px 16px;
+	align-items: center;
+	justify-content: space-between;
+	margin: 12px 0 0;
+	padding: 10px 16px;
+	color: var(--safespot-text);
+	background: var(--safespot-surface);
+	border: 1px solid var(--safespot-border);
+	border-left: 4px solid var(--safespot-accent);
+	border-radius: var(--safespot-radius);
+	box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.safespot-selection-bar[hidden] {
+	display: none;
+}
+
+.safespot-selection-bar__count {
+	margin: 0;
+	font-weight: 600;
+}
+
+.safespot-selection-bar__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+}
+
+.safespot-selection-bar .button .dashicons {
+	width: 16px;
+	height: 16px;
+	margin: 0 2px 0 -2px;
+	font-size: 16px;
+	vertical-align: text-bottom;
+}
+
+.safespot-selection-bar .safespot-bulk-delete:not(:disabled) {
+	color: var(--safespot-error);
+	border-color: var(--safespot-error);
+}
+
+.safespot-selection-bar .safespot-bulk-delete:not(:disabled):hover,
+.safespot-selection-bar .safespot-bulk-delete:not(:disabled):focus {
+	color: #fff;
+	background: var(--safespot-error);
+}
+
+.safespot-bulk-list {
+	max-height: 240px;
+	margin: 0 0 12px;
+	padding: 8px 12px;
+	overflow-y: auto;
+	background: var(--safespot-surface-alt);
+	border: 1px solid var(--safespot-border);
+	border-radius: 6px;
+}
+
+.safespot-bulk-list ul {
+	margin: 4px 0 8px 16px;
+	list-style: disc;
+}
+
+.safespot-bulk-list li {
+	margin: 0 0 2px;
 }
 
 .safespot-note-cell {
@@ -1154,6 +1305,21 @@ html[data-theme="dark"] .safespot-modal {
 		position: relative;
 		padding: 4px 8px 4px 35% !important;
 		border: 0;
+	}
+
+	.safespot-items .safespot-history-table .check-column {
+		display: block;
+		width: auto;
+		padding: 4px 8px !important;
+		border: 0;
+	}
+
+	.safespot-history-table .check-column::before {
+		display: none !important;
+	}
+
+	.safespot-selection-bar {
+		bottom: 8px;
 	}
 
 	.safespot-history-table td.safespot-point-actions {

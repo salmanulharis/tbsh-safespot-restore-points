@@ -41,6 +41,13 @@ final class SafeSpot_Plugin {
 	private $queue;
 
 	/**
+	 * Running jobs (status and cancel).
+	 *
+	 * @var SafeSpot_Jobs
+	 */
+	private $jobs;
+
+	/**
 	 * Returns the singleton.
 	 *
 	 * @return SafeSpot_Plugin
@@ -62,19 +69,20 @@ final class SafeSpot_Plugin {
 		$this->backup  = new SafeSpot_Backup();
 		$this->restore = new SafeSpot_Restore( $this->backup );
 		$this->queue   = new SafeSpot_Queue( $this->backup );
+		$this->jobs    = new SafeSpot_Jobs( $this->queue );
 
 		add_action( 'init', array( $this, 'load_textdomain' ) );
 
 		( new SafeSpot_Hooks( $this->backup ) )->register();
 		$this->queue->register();
-		( new SafeSpot_REST( $this->backup, $this->restore, $this->queue ) )->register();
+		( new SafeSpot_REST( $this->backup, $this->restore, $this->queue, $this->jobs ) )->register();
 
 		if ( is_admin() ) {
 			( new SafeSpot_Admin( $this->restore ) )->register();
 		}
 
 		if ( defined( 'WP_CLI' ) && WP_CLI && class_exists( 'WP_CLI' ) ) {
-			SafeSpot_CLI::register( $this->backup, $this->restore );
+			SafeSpot_CLI::register( $this->backup, $this->restore, $this->jobs );
 		}
 	}
 
@@ -110,6 +118,15 @@ final class SafeSpot_Plugin {
 	 */
 	public function queue() {
 		return $this->queue;
+	}
+
+	/**
+	 * Running jobs service.
+	 *
+	 * @return SafeSpot_Jobs
+	 */
+	public function jobs() {
+		return $this->jobs;
 	}
 
 	/**

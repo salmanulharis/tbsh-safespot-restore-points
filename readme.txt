@@ -4,7 +4,7 @@ Tags: rollback, restore, backup, plugin updates, version control
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.1
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -21,6 +21,7 @@ SafeSpot is lightweight and focused: it backs up and restores plugin and theme *
 * One click on the SafeSpot screen, a row link on the Plugins screen, a button in the theme details window, or `wp safespot save`.
 * Works for folder plugins, single-file plugins (like Hello Dolly), parent themes and child themes.
 * Each SafeSpot stores the version, date, size, file count, the user who created it, an optional note and a SHA-256 checksum.
+* No duplicates: if a plugin or theme has not changed since its newest SafeSpot, that SafeSpot is kept instead of saving an identical copy – whether the save comes from a click, an update, a retried update, a deletion or WP-CLI.
 
 = Automatic SafeSpots before every update =
 
@@ -43,6 +44,7 @@ SafeSpot is lightweight and focused: it backs up and restores plugin and theme *
 
 * Dashboard with protection status, storage use, recent activity and updates that are waiting – save SafeSpots for all of them in one go.
 * Plugins and Themes tabs with search, filters, bulk save and a full history per item: restore, download, edit note, lock and delete.
+* Select several SafeSpots – one by one, all of an item at once, or a range with Shift-click – and lock, unlock or delete them together. Locked SafeSpots are kept by bulk delete unless you explicitly include them.
 * Retention: keep the last N SafeSpots per item (default 3), optionally delete SafeSpots older than X days. Locked SafeSpots are never removed automatically.
 * Activity log of every save, restore, rollback, deletion and settings change, with filters.
 * Email notification when an automatic SafeSpot or a restore fails.
@@ -112,6 +114,8 @@ SafeSpot metadata (version, checksum, size, source, lock…) is queried by item,
 
 SafeSpot raises PHP time and memory limits where allowed and streams files into the archive. "Save SafeSpots for all" runs as a background queue (Action Scheduler if available, otherwise WP-Cron). For very large items on restrictive hosts, use WP-CLI.
 
+While a backup runs, the SafeSpot screen shows its progress and lets you cancel it. If the server stopped the request, the job is shown as not responding and you can release it straight away (`wp safespot cancel --force` does the same).
+
 = Does it work on multisite? =
 
 Yes. SafeSpot is managed from Network Admin by network administrators, network-activated plugins stay network-activated after a restore, and the settings snapshot includes network options (`sitemeta`).
@@ -145,12 +149,19 @@ Undo the most recent restore.
 `wp safespot delete <id>... [--yes]`
 Delete one or more SafeSpots.
 
+`wp safespot status [--format=<text|json>]`
+Show the backup, restore or bulk save that is running, with its current step and progress.
+
+`wp safespot cancel [--force] [--wait=<seconds>]`
+Cancel the running backup or bulk save (or a restore that has not started replacing files). `--force` releases an operation whose process stopped responding.
+
 == Hooks ==
 
 Actions:
 
 * `safespot_before_save( array $item, array $args )`
 * `safespot_after_save( array $point, array $item, array $args )`
+* `safespot_duplicate_skipped( array $point, array $item, array $args )` – a save was answered with an existing, identical SafeSpot.
 * `safespot_after_delete( array $point )`
 * `safespot_before_restore( array $point, array|null $item, array $args )`
 * `safespot_after_restore( array $point, array|null $item, array $result )`
@@ -161,14 +172,31 @@ Filters:
 * `safespot_storage_path( string $path )` – absolute storage folder.
 * `safespot_backup_exclude( string[] $patterns, array $item )` – relative paths or `fnmatch()` patterns to leave out of archives (for example `.git` or `node_modules`).
 * `safespot_should_auto_backup( bool $should, string $type, string $slug )` – skip automatic SafeSpots programmatically.
+* `safespot_reuse_identical( bool $reuse, array $point, array $item, array $args )` – return false to always save a new SafeSpot, even when nothing changed.
 * `safespot_user_can( bool $allowed, string $action, string $type )` – customize permissions (`view`, `save`, `restore`, `delete`, `settings`).
 * `safespot_use_ziparchive( bool $use )` – return false to force the PclZip fallback.
+* `safespot_zip_batch_size( int $batch )` – files added before the archive is written to disk (default 0 = one pass; 500 with libzip older than 1.0).
 
 == Privacy ==
 
 SafeSpot does not send data anywhere. SafeSpots, the activity log (which stores WordPress user IDs) and settings stay in your database and uploads folder.
 
 == Changelog ==
+
+= 1.1.0 =
+* New: Select SafeSpots in the history (individually, all of an item, or a range with Shift-click) and lock, unlock or delete them in one go. Bulk delete keeps locked SafeSpots unless you include them.
+* Fix: Duplicate SafeSpots. Saving, updating, retrying a failed update, deleting or bulk-saving an item that has not changed since its newest SafeSpot now keeps that SafeSpot instead of saving an identical copy. Changes are detected from the file contents (and settings, when included), not from timestamps.
+* Fix: "Save SafeSpots for selected" could save an item twice and skip the next one when the background queue and the open admin screen processed the queue at the same time.
+* Fix: Uploading an invalid or incompatible plugin zip over an installed plugin no longer leaves an unnecessary SafeSpot behind.
+* Fix: An existing SafeSpot is never removed when an upload over an installed item is cancelled.
+* Fix: The automatic SafeSpot before deleting a plugin is now saved before the plugin's own uninstall routine runs, so its settings snapshot still contains the plugin's settings.
+* Improvement: Unchanged items are recognised without building an archive, so repeated saves are much faster.
+* New: See what SafeSpot is doing. When a backup or restore is running, the SafeSpot screen shows which plugin or theme, the current step with progress, who started it and when. "SafeSpot is busy" messages now say what is running instead of only asking you to try again.
+* New: Cancel a running backup (also a bulk save, or a restore that has not started replacing files yet) from the SafeSpot screen, the save and restore dialogs, the Plugins screen or `wp safespot cancel`. Nothing is left behind. A restore that is replacing files cannot be stopped half-way, so it is never left broken.
+* Fix: Saving a SafeSpot of a large plugin was very slow (5.5 minutes for a 300 MB plugin with 29,000 files, now about 40 seconds) and kept every other SafeSpot action blocked meanwhile. The archive was rewritten from scratch every 500 files; it is now written in one pass.
+* Fix: If the server killed a backup (for example a timeout), SafeSpot stayed blocked for up to 30 minutes. A job that stops responding is now shown as such, can be released at once, and is cleared automatically after 10 minutes without a sign of life.
+* Developer: New `POST /safespot/v1/points/bulk` endpoint, `safespot_reuse_identical` filter and `safespot_duplicate_skipped` action. `POST /safespot/v1/points` and `wp safespot save` report when an existing SafeSpot was kept.
+* Developer: New `GET /safespot/v1/jobs` and `POST /safespot/v1/jobs/cancel` endpoints, `wp safespot status` and `wp safespot cancel [--force]` commands, and the `safespot_zip_batch_size` filter. "Busy" errors (`safespot_locked`) include the running job in their data.
 
 = 1.0.1 =
 * Fix: The per-item "Auto" switches now show whether an automatic SafeSpot will really be saved. They are shown off and disabled when automatic SafeSpots are turned off in Settings, instead of appearing on.
@@ -182,6 +210,9 @@ SafeSpot does not send data anywhere. SafeSpots, the activity log (which stores 
 * Initial release.
 
 == Upgrade Notice ==
+
+= 1.1.0 =
+Prevents duplicate SafeSpots, fixes a bulk-save race and adds bulk lock, unlock and delete for SafeSpots.
 
 = 1.0.1 =
 The Auto switches and dashboard now show the real automatic SafeSpot state. Check Settings if they appear off.

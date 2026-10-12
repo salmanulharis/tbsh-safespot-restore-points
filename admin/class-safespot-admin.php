@@ -138,6 +138,7 @@ class SafeSpot_Admin {
 					'settingsSnapshot' => (bool) SafeSpot_Settings::get( 'settings_snapshot' ),
 					'pageUrl'          => SafeSpot_Admin_Views::page_url(),
 					'canSettings'      => SafeSpot_Permissions::can( 'settings' ),
+					'jobs'             => safespot()->jobs()->status(),
 				)
 			);
 			return;

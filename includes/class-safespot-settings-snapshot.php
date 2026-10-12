@@ -95,6 +95,20 @@ class SafeSpot_Settings_Snapshot {
 	}
 
 	/**
+	 * Fingerprint of a snapshot's data (ignores when it was taken).
+	 *
+	 * @param array $snapshot Snapshot.
+	 * @return string
+	 */
+	public static function fingerprint( array $snapshot ) {
+		$options = (array) ( $snapshot['options'] ?? array() );
+		$network = (array) ( $snapshot['network_options'] ?? array() );
+		ksort( $options );
+		ksort( $network );
+		return hash( 'sha256', (string) wp_json_encode( array( $snapshot['prefixes'] ?? array(), $options, $network ) ) );
+	}
+
+	/**
 	 * Number of rows in a snapshot.
 	 *
 	 * @param array $snapshot Snapshot.

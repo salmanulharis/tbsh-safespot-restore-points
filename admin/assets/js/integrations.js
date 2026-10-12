@@ -16,15 +16,19 @@
 	/**
 	 * Shows a dismissible admin notice below the page heading.
 	 *
-	 * @param {string} type    Notice type.
-	 * @param {string} message Message.
+	 * @param {string}      type    Notice type.
+	 * @param {string}      message Message.
+	 * @param {HTMLElement} extra   Optional element appended to the notice.
 	 */
-	function notice( type, message ) {
+	function notice( type, message, extra ) {
 		const el = document.createElement( 'div' );
 		el.className = 'notice notice-' + type + ' is-dismissible safespot-notice';
 		const p = document.createElement( 'p' );
 		p.textContent = message;
 		el.appendChild( p );
+		if ( extra ) {
+			el.appendChild( extra );
+		}
 
 		const dismiss = document.createElement( 'button' );
 		dismiss.type = 'button';
@@ -46,6 +50,35 @@
 	}
 
 	/**
+	 * For a "SafeSpot is busy" error: a button that cancels the running job.
+	 *
+	 * @param {Object} error apiFetch error.
+	 * @return {HTMLElement|undefined} Paragraph with the button.
+	 */
+	function busyActions( error ) {
+		if ( ! error || 'safespot_locked' !== error.code ) {
+			return undefined;
+		}
+		const wrap = document.createElement( 'p' );
+		const button = document.createElement( 'button' );
+		button.type = 'button';
+		button.className = 'button button-small';
+		button.textContent = __( 'Cancel the running job', 'tbsh-safespot-restore-points' );
+		button.addEventListener( 'click', async () => {
+			button.disabled = true;
+			try {
+				const response = await apiFetch( { path: NS + '/jobs/cancel', method: 'POST', data: {} } );
+				wrap.textContent = response.message;
+			} catch ( cancelError ) {
+				button.disabled = false;
+				wrap.append( ' ' + ( ( cancelError && cancelError.message ) || '' ) );
+			}
+		} );
+		wrap.appendChild( button );
+		return wrap;
+	}
+
+	/**
 	 * Saves a SafeSpot and updates the trigger's label.
 	 *
 	 * @param {HTMLElement} trigger Link or button.
@@ -63,14 +96,14 @@
 
 		try {
 			const response = await apiFetch( { path: NS + '/points', method: 'POST', data: { type, slug } } );
-			trigger.textContent = __( 'SafeSpot saved', 'tbsh-safespot-restore-points' );
-			notice( 'success', response.message );
+			trigger.textContent = response.reused ? __( 'Already saved', 'tbsh-safespot-restore-points' ) : __( 'SafeSpot saved', 'tbsh-safespot-restore-points' );
+			notice( response.reused ? 'info' : 'success', response.message );
 			window.setTimeout( () => {
 				trigger.textContent = original;
 			}, 4000 );
 		} catch ( error ) {
 			trigger.textContent = original;
-			notice( 'error', ( error && error.message ) || __( 'Could not save the SafeSpot.', 'tbsh-safespot-restore-points' ) );
+			notice( 'error', ( error && error.message ) || __( 'Could not save the SafeSpot.', 'tbsh-safespot-restore-points' ), busyActions( error ) );
 		} finally {
 			trigger.removeAttribute( 'aria-busy' );
 			trigger.classList.remove( 'is-busy' );

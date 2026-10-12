@@ -44,6 +44,7 @@ class SafeSpot_Logger {
 			'hold'     => __( 'Updates paused/resumed', 'tbsh-safespot-restore-points' ),
 			'settings' => __( 'Settings', 'tbsh-safespot-restore-points' ),
 			'download' => __( 'Downloaded', 'tbsh-safespot-restore-points' ),
+			'cancel'   => __( 'Cancelled', 'tbsh-safespot-restore-points' ),
 		);
 	}
 

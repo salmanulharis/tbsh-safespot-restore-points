@@ -98,6 +98,8 @@ class SafeSpot_Installer {
   settings_file varchar(255) NOT NULL DEFAULT '',
   settings_checksum char(64) NOT NULL DEFAULT '',
   settings_count int(10) unsigned NOT NULL DEFAULT 0,
+  fingerprint char(64) NOT NULL DEFAULT '',
+  settings_fingerprint char(64) NOT NULL DEFAULT '',
   note text NULL,
   source varchar(20) NOT NULL DEFAULT 'manual',
   is_locked tinyint(1) unsigned NOT NULL DEFAULT 0,

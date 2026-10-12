@@ -113,6 +113,36 @@ if ( ! SafeSpot_Settings::auto_backup_enabled( $safespot_type ) ) {
 		}
 		?>
 	</table>
+	<?php
+	$safespot_can_lock   = SafeSpot_Permissions::can( 'save', $safespot_type );
+	$safespot_can_delete = SafeSpot_Permissions::can( 'delete', $safespot_type );
+	?>
+	<?php if ( $safespot_can_lock || $safespot_can_delete ) : ?>
+		<div class="safespot-selection-bar" role="region" aria-label="<?php esc_attr_e( 'Selected SafeSpots', 'tbsh-safespot-restore-points' ); ?>" hidden>
+			<p class="safespot-selection-bar__count" aria-live="polite"></p>
+			<div class="safespot-selection-bar__actions">
+				<?php if ( $safespot_can_lock ) : ?>
+					<button type="button" class="button" data-safespot-action="bulk-lock">
+						<span class="dashicons dashicons-lock" aria-hidden="true"></span>
+						<?php esc_html_e( 'Lock', 'tbsh-safespot-restore-points' ); ?>
+					</button>
+					<button type="button" class="button" data-safespot-action="bulk-unlock">
+						<span class="dashicons dashicons-unlock" aria-hidden="true"></span>
+						<?php esc_html_e( 'Unlock', 'tbsh-safespot-restore-points' ); ?>
+					</button>
+				<?php endif; ?>
+				<?php if ( $safespot_can_delete ) : ?>
+					<button type="button" class="button safespot-bulk-delete" data-safespot-action="bulk-delete">
+						<span class="dashicons dashicons-trash" aria-hidden="true"></span>
+						<?php esc_html_e( 'Delete…', 'tbsh-safespot-restore-points' ); ?>
+					</button>
+				<?php endif; ?>
+				<button type="button" class="button-link" data-safespot-action="clear-selection">
+					<?php esc_html_e( 'Clear selection', 'tbsh-safespot-restore-points' ); ?>
+				</button>
+			</div>
+		</div>
+	<?php endif; ?>
 	<div class="safespot-empty safespot-no-results" hidden>
 		<span class="dashicons dashicons-search" aria-hidden="true"></span>
 		<p><?php esc_html_e( 'Nothing matches your search.', 'tbsh-safespot-restore-points' ); ?></p>

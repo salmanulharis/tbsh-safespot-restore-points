@@ -49,7 +49,8 @@ class SafeSpot_Zip {
 			return new WP_Error( 'safespot_source_missing', __( 'The plugin or theme files could not be found.', 'tbsh-safespot-restore-points' ) );
 		}
 
-		$files = self::collect( $source, $exclude );
+		$files = self::scan( $source, $exclude );
+		self::$last_scan = null;
 		if ( is_wp_error( $files ) ) {
 			return $files;
 		}
@@ -68,6 +69,96 @@ class SafeSpot_Zip {
 			'uncompressed_size' => $files['size'],
 			'skipped'           => $files['skipped'],
 		);
+	}
+
+	/**
+	 * Content fingerprint of a plugin/theme folder (or single file).
+	 *
+	 * SHA-256 over every entry that would be archived: its relative path, size and
+	 * contents, in a fixed order. Timestamps are ignored, so the fingerprint only
+	 * changes when the files really change. Used to avoid saving duplicate SafeSpots.
+	 *
+	 * @param string $source  Absolute folder or file path.
+	 * @param array  $exclude Relative paths (from the folder root) to skip.
+	 * @return string|WP_Error
+	 */
+	public static function fingerprint( $source, array $exclude = array() ) {
+		$source = untrailingslashit( wp_normalize_path( $source ) );
+
+		if ( ! file_exists( $source ) ) {
+			return new WP_Error( 'safespot_source_missing', __( 'The plugin or theme files could not be found.', 'tbsh-safespot-restore-points' ) );
+		}
+
+		$files = self::scan( $source, $exclude );
+		if ( is_wp_error( $files ) ) {
+			return $files;
+		}
+
+		$entries = $files['entries'];
+		usort(
+			$entries,
+			static function ( $a, $b ) {
+				return strcmp( $a['local'], $b['local'] );
+			}
+		);
+
+		$context = hash_init( 'sha256' );
+		$total   = $files['count'];
+		$done    = 0;
+		SafeSpot_Lock::phase( 'fingerprint', 0, $total );
+		foreach ( $entries as $entry ) {
+			hash_update( $context, $entry['local'] . "\0" );
+			if ( $entry['dir'] ) {
+				continue;
+			}
+			hash_update( $context, (string) filesize( $entry['path'] ) . "\0" );
+			if ( ! hash_update_file( $context, $entry['path'] ) ) {
+				/* translators: %s: file path. */
+				return new WP_Error( 'safespot_unreadable', sprintf( __( 'This file is not readable: %s', 'tbsh-safespot-restore-points' ), $entry['local'] ) );
+			}
+			if ( SafeSpot_Lock::checkpoint( array( 'phase' => 'fingerprint', 'done' => ++$done, 'total' => $total ) ) ) {
+				return SafeSpot_Lock::cancelled_error();
+			}
+		}
+
+		return hash_final( $context );
+	}
+
+	/**
+	 * File list of the last fingerprint() call, reused by the create() that follows it,
+	 * so a large folder is scanned once per save (and archived exactly as fingerprinted).
+	 *
+	 * @var array|null { key, files }
+	 */
+	private static $last_scan = null;
+
+	/**
+	 * Builds (or reuses) the list of entries to archive.
+	 *
+	 * @param string $source  Normalized source path.
+	 * @param array  $exclude Excluded relative paths.
+	 * @return array|WP_Error
+	 */
+	private static function scan( $source, array $exclude ) {
+		$key = md5( $source . '|' . wp_json_encode( array_values( $exclude ) ) );
+		if ( self::$last_scan && $key === self::$last_scan['key'] ) {
+			return self::$last_scan['files'];
+		}
+		$files = self::collect( $source, $exclude );
+		if ( ! is_wp_error( $files ) ) {
+			self::$last_scan = array(
+				'key'   => $key,
+				'files' => $files,
+			);
+		}
+		return $files;
+	}
+
+	/**
+	 * Drops the cached file list (call when a save is over).
+	 */
+	public static function forget_scan() {
+		self::$last_scan = null;
 	}
 
 	/**
@@ -104,6 +195,8 @@ class SafeSpot_Zip {
 			'dir'   => true,
 		);
 
+		SafeSpot_Lock::phase( 'scanning' );
+
 		try {
 			$iterator = new RecursiveIteratorIterator(
 				new RecursiveDirectoryIterator( $source, FilesystemIterator::SKIP_DOTS ),
@@ -111,6 +204,10 @@ class SafeSpot_Zip {
 			);
 
 			foreach ( $iterator as $file ) {
+				if ( SafeSpot_Lock::checkpoint( array( 'phase' => 'scanning', 'done' => $count ) ) ) {
+					return SafeSpot_Lock::cancelled_error();
+				}
+
 				/**
 				 * Directory entry.
 				 *
@@ -199,35 +296,133 @@ class SafeSpot_Zip {
 			return new WP_Error( 'safespot_zip_open', sprintf( __( 'Could not create the archive (ZipArchive error %s).', 'tbsh-safespot-restore-points' ), (string) $opened ) );
 		}
 
+		$batch = self::batch_size();
+		$total = $files['count'];
 		$added = 0;
+		SafeSpot_Lock::phase( 'archiving', 0, $total );
+		self::watch( $zip );
+
 		foreach ( $files['entries'] as $entry ) {
 			if ( $entry['dir'] ) {
 				$zip->addEmptyDir( rtrim( $entry['local'], '/' ) );
 				continue;
 			}
 			if ( ! $zip->addFile( $entry['path'], $entry['local'] ) ) {
-				$zip->close();
+				self::discard( $zip, $dest );
 				/* translators: %s: file path. */
 				return new WP_Error( 'safespot_zip_add', sprintf( __( 'Could not add a file to the archive: %s', 'tbsh-safespot-restore-points' ), $entry['local'] ) );
 			}
 			++$added;
 
-			// Flush periodically so very large folders do not exhaust open file handles.
-			if ( 0 === $added % 500 ) {
+			if ( SafeSpot_Lock::checkpoint( array( 'phase' => 'archiving', 'done' => $added, 'total' => $total ) ) ) {
+				self::discard( $zip, $dest );
+				return SafeSpot_Lock::cancelled_error();
+			}
+
+			/*
+			 * Old libzip versions keep a file handle open for every added file, so the
+			 * archive is written in batches there. Every batch rewrites the archive written
+			 * so far, which is why modern libzip writes it in one pass (see batch_size()).
+			 */
+			if ( $batch && 0 === $added % $batch ) {
 				if ( ! $zip->close() ) {
-					return new WP_Error( 'safespot_zip_write', __( 'Could not write the archive. The disk may be full.', 'tbsh-safespot-restore-points' ) );
+					return self::write_error( $dest );
 				}
 				$zip = new ZipArchive();
 				if ( true !== $zip->open( $dest ) ) {
 					return new WP_Error( 'safespot_zip_reopen', __( 'Could not reopen the archive while writing.', 'tbsh-safespot-restore-points' ) );
 				}
+				self::watch( $zip );
 			}
 		}
 
-		if ( ! $zip->close() ) {
-			return new WP_Error( 'safespot_zip_write', __( 'Could not write the archive. The disk may be full.', 'tbsh-safespot-restore-points' ) );
+		// Compression happens while the archive is closed; this is the slow part.
+		SafeSpot_Lock::phase( 'compressing', 0, 100 );
+		// A cancel request makes close() fail with an "Operation cancelled" warning; that is expected.
+		$closed = @$zip->close(); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Handled below.
+
+		if ( SafeSpot_Lock::is_cancelled() ) {
+			wp_delete_file( $dest );
+			return SafeSpot_Lock::cancelled_error();
+		}
+		if ( ! $closed ) {
+			return self::write_error( $dest );
 		}
 		return true;
+	}
+
+	/**
+	 * Files added before the archive is written to disk (0 = all at once).
+	 *
+	 * @return int
+	 */
+	private static function batch_size() {
+		$modern = defined( 'ZipArchive::LIBZIP_VERSION' ) && version_compare( ZipArchive::LIBZIP_VERSION, '1.0', '>=' );
+
+		/**
+		 * Filters how many files are added to a ZipArchive before it is written to disk.
+		 *
+		 * Each intermediate write copies the archive written so far, so small batches make
+		 * large plugins very slow. 0 writes the archive once, at the end.
+		 *
+		 * @param int $batch Batch size (default 0 with libzip 1.0+, otherwise 500).
+		 */
+		return max( 0, (int) apply_filters( 'safespot_zip_batch_size', $modern ? 0 : 500 ) );
+	}
+
+	/**
+	 * Reports progress and honours cancel requests while ZipArchive writes the archive.
+	 *
+	 * @param ZipArchive $zip Archive.
+	 */
+	private static function watch( ZipArchive $zip ) {
+		if ( ! SafeSpot_Lock::is_owner() ) {
+			return;
+		}
+		if ( method_exists( $zip, 'registerProgressCallback' ) ) {
+			$zip->registerProgressCallback(
+				0.01,
+				static function ( $rate ) {
+					SafeSpot_Lock::checkpoint(
+						array(
+							'phase' => 'compressing',
+							'done'  => (int) round( $rate * 100 ),
+							'total' => 100,
+						)
+					);
+				}
+			);
+		}
+		if ( method_exists( $zip, 'registerCancelCallback' ) ) {
+			$zip->registerCancelCallback(
+				static function () {
+					return SafeSpot_Lock::checkpoint() ? -1 : 0;
+				}
+			);
+		}
+	}
+
+	/**
+	 * Abandons an archive that is being built, without writing it.
+	 *
+	 * @param ZipArchive $zip  Archive.
+	 * @param string     $dest Destination path.
+	 */
+	private static function discard( ZipArchive $zip, $dest ) {
+		$zip->unchangeAll();
+		$zip->close();
+		wp_delete_file( $dest );
+	}
+
+	/**
+	 * Error for a failed archive write.
+	 *
+	 * @param string $dest Destination path.
+	 * @return WP_Error
+	 */
+	private static function write_error( $dest ) {
+		wp_delete_file( $dest );
+		return new WP_Error( 'safespot_zip_write', __( 'Could not write the archive. The disk may be full.', 'tbsh-safespot-restore-points' ) );
 	}
 
 	/**
@@ -251,6 +446,11 @@ class SafeSpot_Zip {
 		}
 		if ( empty( $paths ) ) {
 			return new WP_Error( 'safespot_empty_source', __( 'There are no files to archive.', 'tbsh-safespot-restore-points' ) );
+		}
+
+		// PclZip offers no progress hooks: the job can only be cancelled before it starts.
+		if ( SafeSpot_Lock::phase( 'compressing' ) ) {
+			return SafeSpot_Lock::cancelled_error();
 		}
 
 		$archive = new PclZip( $dest );

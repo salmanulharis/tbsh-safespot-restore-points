@@ -39,29 +39,31 @@ class SafeSpot_Points {
 		global $wpdb;
 
 		$row = array(
-			'item_type'         => 'theme' === ( $data['item_type'] ?? '' ) ? 'theme' : 'plugin',
-			'slug'              => (string) ( $data['slug'] ?? '' ),
-			'name'              => (string) ( $data['name'] ?? '' ),
-			'version'           => (string) ( $data['version'] ?? '' ),
-			'file_name'         => (string) ( $data['file_name'] ?? '' ),
-			'file_size'         => (int) ( $data['file_size'] ?? 0 ),
-			'uncompressed_size' => (int) ( $data['uncompressed_size'] ?? 0 ),
-			'file_count'        => (int) ( $data['file_count'] ?? 0 ),
-			'checksum'          => (string) ( $data['checksum'] ?? '' ),
-			'settings_file'     => (string) ( $data['settings_file'] ?? '' ),
-			'settings_checksum' => (string) ( $data['settings_checksum'] ?? '' ),
-			'settings_count'    => (int) ( $data['settings_count'] ?? 0 ),
-			'note'              => (string) ( $data['note'] ?? '' ),
-			'source'            => in_array( $data['source'] ?? '', self::SOURCES, true ) ? $data['source'] : 'manual',
-			'is_locked'         => empty( $data['is_locked'] ) ? 0 : 1,
-			'requires_wp'       => (string) ( $data['requires_wp'] ?? '' ),
-			'requires_php'      => (string) ( $data['requires_php'] ?? '' ),
-			'parent_theme'      => (string) ( $data['parent_theme'] ?? '' ),
-			'created_by'        => (int) ( $data['created_by'] ?? 0 ),
-			'created_at'        => (string) ( $data['created_at'] ?? current_time( 'mysql', true ) ),
+			'item_type'            => 'theme' === ( $data['item_type'] ?? '' ) ? 'theme' : 'plugin',
+			'slug'                 => (string) ( $data['slug'] ?? '' ),
+			'name'                 => (string) ( $data['name'] ?? '' ),
+			'version'              => (string) ( $data['version'] ?? '' ),
+			'file_name'            => (string) ( $data['file_name'] ?? '' ),
+			'file_size'            => (int) ( $data['file_size'] ?? 0 ),
+			'uncompressed_size'    => (int) ( $data['uncompressed_size'] ?? 0 ),
+			'file_count'           => (int) ( $data['file_count'] ?? 0 ),
+			'checksum'             => (string) ( $data['checksum'] ?? '' ),
+			'settings_file'        => (string) ( $data['settings_file'] ?? '' ),
+			'settings_checksum'    => (string) ( $data['settings_checksum'] ?? '' ),
+			'settings_count'       => (int) ( $data['settings_count'] ?? 0 ),
+			'fingerprint'          => (string) ( $data['fingerprint'] ?? '' ),
+			'settings_fingerprint' => (string) ( $data['settings_fingerprint'] ?? '' ),
+			'note'                 => (string) ( $data['note'] ?? '' ),
+			'source'               => in_array( $data['source'] ?? '', self::SOURCES, true ) ? $data['source'] : 'manual',
+			'is_locked'            => empty( $data['is_locked'] ) ? 0 : 1,
+			'requires_wp'          => (string) ( $data['requires_wp'] ?? '' ),
+			'requires_php'         => (string) ( $data['requires_php'] ?? '' ),
+			'parent_theme'         => (string) ( $data['parent_theme'] ?? '' ),
+			'created_by'           => (int) ( $data['created_by'] ?? 0 ),
+			'created_at'           => (string) ( $data['created_at'] ?? current_time( 'mysql', true ) ),
 		);
 
-		$formats = array( '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%s', '%s', '%s', '%d', '%s', '%s', '%d', '%s', '%s', '%s', '%d', '%s' );
+		$formats = array( '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%d', '%s' );
 
 		if ( false === $wpdb->insert( self::table(), $row, $formats ) ) {
 			return new WP_Error( 'safespot_db_insert', __( 'Could not save the SafeSpot record to the database.', 'tbsh-safespot-restore-points' ) );
@@ -80,6 +82,50 @@ class SafeSpot_Points {
 		$table = self::table();
 		$row   = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE id = %d", $id ), ARRAY_A );
 		return $row ? self::cast( $row ) : null;
+	}
+
+	/**
+	 * Newest SafeSpot of an item.
+	 *
+	 * @param string $type Item type.
+	 * @param string $slug Item slug.
+	 * @return array|null
+	 */
+	public static function latest( $type, $slug ) {
+		$rows = self::query(
+			array(
+				'type'  => $type,
+				'slug'  => $slug,
+				'limit' => 1,
+			)
+		);
+		return $rows ? $rows[0] : null;
+	}
+
+	/**
+	 * Fetches several SafeSpot rows.
+	 *
+	 * @param int[] $ids IDs.
+	 * @return array[] Keyed by ID; missing IDs are left out.
+	 */
+	public static function get_many( array $ids ) {
+		global $wpdb;
+
+		$ids = array_values( array_unique( array_filter( array_map( 'absint', $ids ) ) ) );
+		if ( empty( $ids ) ) {
+			return array();
+		}
+
+		$table        = self::table();
+		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+		$rows         = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE id IN ({$placeholders})", $ids ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Placeholders are built from the ID count.
+
+		$out = array();
+		foreach ( (array) $rows as $row ) {
+			$row               = self::cast( $row );
+			$out[ $row['id'] ] = $row;
+		}
+		return $out;
 	}
 
 	/**

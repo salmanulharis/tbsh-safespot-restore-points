@@ -34,18 +34,27 @@ class SafeSpot_Hooks {
 	private $package_options = array();
 
 	/**
-	 * ID of the most recent automatic SafeSpot saved in this request.
+	 * ID of the most recent automatic SafeSpot newly created in this request
+	 * (0 when the save reused an existing identical SafeSpot).
 	 *
 	 * @var int
 	 */
-	private $last_auto_id = 0;
+	private $last_created_id = 0;
 
 	/**
-	 * SafeSpot taken before an install that may still abort because the folder exists.
+	 * SafeSpot taken before an install that may still abort without touching the files.
 	 *
 	 * @var int
 	 */
 	private $speculative_id = 0;
+
+	/**
+	 * Whether the current package passed every upgrader_source_selection filter, i.e.
+	 * whether the upgrader went on to touch the destination.
+	 *
+	 * @var bool
+	 */
+	private $source_selected = false;
 
 	/**
 	 * Constructor.
@@ -64,7 +73,10 @@ class SafeSpot_Hooks {
 		add_filter( 'upgrader_package_options', array( $this, 'capture_package_options' ), PHP_INT_MAX );
 		add_filter( 'upgrader_pre_install', array( $this, 'before_update' ), 5, 2 );
 		add_filter( 'upgrader_source_selection', array( $this, 'before_overwrite_install' ), 5, 4 );
+		add_filter( 'upgrader_source_selection', array( $this, 'source_selected' ), PHP_INT_MAX );
 		add_filter( 'upgrader_install_package_result', array( $this, 'discard_speculative' ), 10, 2 );
+		// Core runs a plugin's uninstall routine before "delete_plugin", so back up first.
+		add_action( 'pre_uninstall_plugin', array( $this, 'before_delete_plugin' ) );
 		add_action( 'delete_plugin', array( $this, 'before_delete_plugin' ) );
 		add_action( 'delete_theme', array( $this, 'before_delete_theme' ) );
 
@@ -90,7 +102,20 @@ class SafeSpot_Hooks {
 	 */
 	public function capture_package_options( $options ) {
 		$this->package_options = is_array( $options ) ? $options : array();
+		$this->speculative_id  = 0;
+		$this->source_selected = false;
 		return $options;
+	}
+
+	/**
+	 * Records that the package passed source selection (runs last on that filter).
+	 *
+	 * @param string|WP_Error $source Extracted source path.
+	 * @return string|WP_Error
+	 */
+	public function source_selected( $source ) {
+		$this->source_selected = ! is_wp_error( $source );
+		return $source;
 	}
 
 	/**
@@ -145,7 +170,13 @@ class SafeSpot_Hooks {
 		);
 
 		if ( ! is_wp_error( $result ) ) {
-			$this->last_auto_id = (int) $result['id'];
+			$this->last_created_id = empty( $result['reused'] ) ? (int) $result['id'] : 0;
+			return true;
+		}
+
+		// A user cancelled this SafeSpot on purpose: let the update go ahead, no alert.
+		if ( 'safespot_cancelled' === $result->get_error_code() ) {
+			$this->last_created_id = 0;
 			return true;
 		}
 
@@ -202,7 +233,8 @@ class SafeSpot_Hooks {
 	 *
 	 * Some tools set clear_destination inside install_package() where it cannot be
 	 * observed, so any install over an existing item is backed up. If the install then
-	 * aborts because the folder exists, discard_speculative() removes the SafeSpot.
+	 * aborts before touching the files (the folder exists, or a later check rejects the
+	 * package), discard_speculative() removes the SafeSpot again.
 	 *
 	 * @param string|WP_Error $source        Extracted source path.
 	 * @param string          $remote_source Remote source.
@@ -241,21 +273,24 @@ class SafeSpot_Hooks {
 			return $source;
 		}
 
-		$this->last_auto_id = 0;
-		$result             = $this->auto_backup( $type, $slug, 'auto_update', __( 'Auto – before uploaded zip replaced this version', 'tbsh-safespot-restore-points' ) );
+		$this->last_created_id = 0;
+		$result                = $this->auto_backup( $type, $slug, 'auto_update', __( 'Auto – before uploaded zip replaced this version', 'tbsh-safespot-restore-points' ) );
 
 		if ( is_wp_error( $result ) && $certain && SafeSpot_Settings::get( 'abort_update_on_failure' ) ) {
 			/* translators: %s: error message. */
 			return new WP_Error( 'safespot_auto_backup_failed', sprintf( __( 'Installation cancelled because SafeSpot could not save a restore point first: %s', 'tbsh-safespot-restore-points' ), $result->get_error_message() ) );
 		}
 
-		$this->speculative_id = $certain ? 0 : $this->last_auto_id;
+		// Only a SafeSpot created right here may be discarded later, never a reused one.
+		$this->speculative_id = $certain ? 0 : $this->last_created_id;
 
 		return $source;
 	}
 
 	/**
-	 * Removes the SafeSpot taken before an install that aborted because the folder exists.
+	 * Removes the speculative SafeSpot when the install failed without touching the
+	 * installed files: it aborted because the folder exists, or the package was rejected
+	 * during source selection (e.g. no valid plugin found, incompatible requirements).
 	 *
 	 * @param array|WP_Error $result     Install result.
 	 * @param array          $hook_extra Context.
@@ -266,8 +301,17 @@ class SafeSpot_Hooks {
 
 		$id                   = $this->speculative_id;
 		$this->speculative_id = 0;
-		if ( $id && is_wp_error( $result ) && 'folder_exists' === $result->get_error_code() ) {
+		if ( ! $id || ! is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		$untouched = ! $this->source_selected || 'folder_exists' === $result->get_error_code();
+		if ( $untouched ) {
+			$point = SafeSpot_Points::get( $id );
 			$this->backup->delete( $id, false );
+			if ( $point ) {
+				unset( $this->done[ $point['item_type'] . ':' . $point['slug'] ] );
+			}
 		}
 		return $result;
 	}
